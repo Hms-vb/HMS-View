@@ -302,6 +302,61 @@ function cabecalhosResposta(upstream, cors, tipoConteudo) {
   return headers;
 }
 
+function urlHttpsSegura(valor) {
+  const alvo = new URL(valor);
+  if (alvo.protocol !== "http:") return alvo;
+  alvo.protocol = "https:";
+  if (alvo.port === "80") alvo.port = "";
+  return alvo;
+}
+
+/**
+ * Resolve o endereço final de um stream sem baixar o vídeo pelo Worker.
+ *
+ * Muitos provedores Xtream respondem ao link do filme com um 302 para um
+ * CDN/anti-leech. Esse CDN costuma bloquear os IPs de datacenter do
+ * Cloudflare, mas aceita normalmente o IP do visitante. Neste modo o Worker
+ * faz somente a primeira requisição (a que gera o link assinado), devolve um
+ * 302 para o navegador e deixa o vídeo ser baixado direto do CDN. Se a
+ * resposta não for um redirecionamento, o conteúdo é repassado normalmente.
+ */
+async function buscarPrimeiroRedirecionamento(alvo, request, env) {
+  const metodo = request.method === "HEAD" ? "HEAD" : "GET";
+  const controller = new AbortController();
+  const timer = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
+
+  try {
+    const headers = new Headers();
+    const range = request.headers.get("Range");
+    const ifRange = request.headers.get("If-Range");
+    if (range) headers.set("Range", range);
+    if (ifRange) headers.set("If-Range", ifRange);
+    headers.set("Accept", request.headers.get("Accept") || "*/*");
+    headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HMS-TV/1.0");
+
+    const resposta = await fetch(alvo.href, {
+      method: metodo,
+      headers: headers,
+      redirect: "manual",
+      signal: controller.signal
+    });
+
+    if (resposta.status >= 300 && resposta.status < 400) {
+      const local = resposta.headers.get("Location");
+      if (local) {
+        const proximo = new URL(local, alvo);
+        validarAlvo(proximo.href, env);
+        const seguro = urlHttpsSegura(proximo.href);
+        return { redirecionado: true, location: seguro.href };
+      }
+    }
+
+    return { redirecionado: false, resposta: resposta, alvo: alvo };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function buscarComRedirecionamentos(alvo, request, env) {
   let atual = alvo;
   const metodo = request.method === "HEAD" ? "HEAD" : "GET";
@@ -371,7 +426,24 @@ export async function onRequest(context) {
   }
 
   try {
-    const resultado = await buscarComRedirecionamentos(alvo, request, env);
+    const modoRedirecionamento = url.searchParams.get("redirect") === "1";
+    let resultado;
+
+    if (modoRedirecionamento) {
+      resultado = await buscarPrimeiroRedirecionamento(alvo, request, env);
+
+      if (resultado.redirecionado) {
+        const headers = new Headers(cors);
+        headers.set("Location", resultado.location);
+        headers.set("Cache-Control", "no-store");
+        // 302: o <video> segue para o CDN e baixa os bytes direto pelo IP do
+        // visitante, contornando o bloqueio de datacenter do provedor.
+        return new Response(null, { status: 302, headers: headers });
+      }
+    } else {
+      resultado = await buscarComRedirecionamentos(alvo, request, env);
+    }
+
     const upstream = resultado.resposta;
     const tipoOriginal = upstream.headers.get("content-type") || "";
     const headers = cabecalhosResposta(upstream, cors, null);
