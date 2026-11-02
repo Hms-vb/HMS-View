@@ -3,11 +3,27 @@
 Projeto pronto para publicar o player HMS-TV e resolver os bloqueios de CORS/HTTPS
 que impedem listas M3U, filmes e canais ao vivo de abrir no navegador.
 
+## Recursos
+
+- Login por **Xtream Codes** (servidor, usuário e senha) ou por **lista M3U/M3U8**.
+- **Modo rápido automático:** se a URL da lista for `get.php` com `username` e
+  `password`, o app tenta primeiro a API Xtream Codes. O catálogo costuma ser
+  muito menor que a lista M3U completa. Se a API não estiver disponível, o app
+  baixa a M3U normalmente, sem intervenção.
+- **Continuar de onde parou:** ao reabrir um filme ou episódio, aparece a opção
+  **Continuar** ou **Assistir do início**. O progresso fica salvo no
+  `localStorage` do navegador.
+- **Séries:** o app reabre a última temporada/episódio assistido e mostra uma
+  barra de progresso nos cards e nos episódios.
+- **Volume no player:** botão de mudo, botões **−** e **+**, slider e percentual.
+  Atalhos: `↑` aumenta, `↓` diminui e `M` silencia.
+- **Proxy CORS/HTTPS** para listas, APIs Xtream, HLS, MP4 e canais `.ts`.
+
 ## Arquivos
 
 | Arquivo | Função |
 |---|---|
-| `index.html` | Player completo (Xtream Codes, listas M3U/M3U8, filmes, séries, canais, favoritos e histórico). |
+| `index.html` | Player completo (Xtream Codes, listas M3U/M3U8, filmes, séries, canais, favoritos, histórico e retomada). |
 | `functions/api/proxy.js` | Proxy CORS/HTTPS publicado automaticamente em `/api/proxy` pelo Cloudflare Pages. |
 | `hls.min.js` | Biblioteca HLS local (fallback quando o CDN está bloqueado). |
 | `mpegts.min.js` | Biblioteca para canais ao vivo no formato `.ts` (fallback local). |
@@ -72,19 +88,58 @@ recomendado para uso público.
 
 ## Como o proxy funciona
 
-- Encaminha `Range`/`If-Range` (necessário para MP4 e alguns streams).
-- Preserva status `206 Partial Content`.
-- Reescreve playlists HLS (`.m3u8`): sub-playlists, segmentos, chaves AES e mapas
-  de inicialização também passam por `/api/proxy`, evitando CORS no meio do vídeo.
+- **Listas M3U grandes são repassadas em streaming.** O proxy não carrega a lista
+  inteira na memória. Isso é essencial no Cloudflare Pages Functions, cujo limite
+  de memória é de aproximadamente 128 MB — uma lista de 100 MB ou mais não pode
+  ser bufferizada.
+- **Somente manifestos HLS (`.m3u8`) são lidos e reescritos**, para que
+  sub-playlists, segmentos, chaves AES e mapas de inicialização também passem por
+  `/api/proxy` e não sofram bloqueio de CORS.
+- Encaminha `Range`/`If-Range` e preserva status `206 Partial Content` para MP4 e
+  outros streams.
+- Segue redirecionamentos validando cada destino.
 - Bloqueia destinos locais/privados (localhost, 10.x, 172.16–31.x, 192.168.x etc.)
   para reduzir risco de SSRF.
-- Segue redirecionamentos validando cada destino.
+
+### Listas M3U muito grandes
+
+Uma lista `get.php?...type=m3u_plus` pode ter **mais de 100 MB**. O app mostra o
+progresso do download (“Baixando 42% • 50 MB”) e permite até cerca de 3 minutos de
+transferência, desde que os dados continuem chegando. Se o link tiver usuário e
+senha, o **modo rápido Xtream** normalmente evita baixar esse arquivo inteiro.
+
+Antes de enviar a lista pelo proxy, o app tenta o **equivalente HTTPS direto** da
+URL. Se a origem liberar CORS (muitas liberam), a lista grande é baixada
+diretamente pelo navegador e não passa pelas Functions. O proxy continua sendo
+usado para os streams que precisam de HTTPS/CORS.
+
+## Se a lista não carregar no Cloudflare
+
+1. **Confirme que as Functions foram publicadas.** Abra no navegador uma URL
+   pequena pelo proxy, por exemplo:
+   `https://seu-projeto.pages.dev/api/proxy?url=https%3A%2F%2Fexample.com`
+   - Se aparecer uma página HTML, 404 ou erro de rota, a pasta `functions` não foi
+     publicada. Use Git ou `wrangler pages deploy`; o upload direto pelo painel
+     não inclui Functions.
+2. **Veja a mensagem de erro no app.** O texto indica se o problema foi proxy não
+   publicado, host bloqueado, tempo esgotado ou falha de rede.
+3. **Confira `ALLOWED_HOSTS`.** Se a variável estiver configurada, o domínio da
+   lista e o host para onde os streams redirecionam precisam estar na lista. Você
+   pode usar `*` durante o teste.
+4. **Aguarde o download da M3U.** Em conexões de ~1,5 MB/s, uma lista de 118 MB
+   leva cerca de 80 segundos. Não feche a aba durante o carregamento.
+5. **Prefira o modo rápido.** Com uma URL `get.php` que tenha `username` e
+   `password`, o app tenta a API Xtream primeiro. Se o provedor bloquear a API, ele
+   volta automaticamente para a M3U.
+6. **Provedores que bloqueiam IPs do Cloudflare** podem continuar indisponíveis.
+   Nesse caso, baixe a lista `.m3u` e selecione o arquivo localmente, ou use um
+   player externo (VLC/MX Player).
 
 ## Limites e observações
 
 - O proxy não quebra DRM nem contorna bloqueios geográficos do provedor.
-- Provedores que bloqueiam IPs do Cloudflare podem continuar indisponíveis; nesse
-  caso use a lista `.m3u` local e/ou um player externo (VLC/MX Player).
+- O progresso de reprodução é local: fica no navegador/dispositivo em que foi
+  assistido e não é sincronizado entre aparelhos.
 - Em uma página HTTPS, streams HTTP puros podem ser bloqueados pelo navegador
   (mixed content). O proxy resolve isso quando a origem permite a conexão.
 - O HTML continua funcionando como arquivo único para Xtream/M3U, desde que a

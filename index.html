@@ -1692,6 +1692,201 @@ img {
   margin-left: auto;
 }
 
+.volume-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 30px;
+  background: #252525;
+}
+
+.volume-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: background 0.18s ease;
+}
+
+.volume-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.volume-slider {
+  width: 96px;
+  height: 4px;
+  margin: 0 2px;
+  accent-color: var(--red);
+  cursor: pointer;
+}
+
+.volume-value {
+  min-width: 38px;
+  color: #dedede;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.resume-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.88));
+  backdrop-filter: blur(5px);
+}
+
+.resume-card {
+  width: min(430px, 100%);
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  background: rgba(20, 20, 20, 0.97);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+  text-align: center;
+}
+
+.resume-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--red);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.resume-card h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.resume-card p {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.resume-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 30px;
+  background: #2a2a2a;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  transition: all 0.18s ease;
+}
+
+.resume-btn:hover {
+  transform: translateY(-1px);
+  background: #383838;
+}
+
+.resume-btn.continuar {
+  background: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 4px 16px var(--red-glow);
+}
+
+.resume-btn.continuar:hover {
+  background: var(--red-hover);
+  border-color: var(--red-hover);
+}
+
+.resume-progress {
+  height: 6px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.resume-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--red);
+  transition: width 0.3s ease;
+}
+
+.card-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.card-progress span {
+  display: block;
+  height: 100%;
+  background: var(--red);
+}
+
+.episode-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.episode-progress span {
+  display: block;
+  height: 100%;
+  background: var(--red);
+}
+
+@media (max-width: 640px) {
+  .volume-control {
+    gap: 4px;
+    padding: 5px 9px;
+  }
+
+  .volume-slider {
+    width: 72px;
+  }
+
+  .volume-value {
+    min-width: 32px;
+    font-size: 0.64rem;
+  }
+}
+
 .episodio-atual {
   margin-top: 14px;
   padding: 12px 16px;
@@ -2334,6 +2529,18 @@ let toastTimer = null;
 let loginEmAndamento = false;
 let observadoresGrade = [];
 
+/* Progresso de reprodução / retomada / volume */
+const CHAVE_PROGRESSO = "iptv_progresso";
+const CHAVE_ULTIMOS_EPISODIOS = "iptv_ultimos_episodios";
+const MIN_SEGUNDOS_RETOMAR = 8;
+const INTERVALO_SALVAR_PROGRESSO = 5000;
+let progressoCache = null;
+let ultimosEpisodiosCache = null;
+let currentPlayback = null;
+let pendingResume = null;
+let ultimoSalvamentoProgresso = 0;
+let volumeAnteriorMudo = 1;
+
 /* ---------- Utilitarios de Seguranca e URLs ---------- */
 const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
 const $$ = (seletor, raiz = document) => Array.from(raiz.querySelectorAll(seletor));
@@ -2401,7 +2608,21 @@ function urlDiretaPermitida(url) {
   return true;
 }
 
-function candidatosDeBusca(url) {
+function urlHttpsEquivalente(url) {
+  const valor = String(url || "").trim();
+  if (!/^http:\/\//i.test(valor)) return "";
+  try {
+    const alvo = new URL(valor);
+    alvo.protocol = "https:";
+    if (alvo.port === "80") alvo.port = "";
+    return alvo.href;
+  } catch (erro) {
+    return "";
+  }
+}
+
+function candidatosDeBusca(url, opcoes) {
+  const config = opcoes || {};
   const lista = [];
   const vistos = new Set();
   function adicionar(endereco, rotulo) {
@@ -2414,10 +2635,20 @@ function candidatosDeBusca(url) {
   const temProxy = Boolean(proxy) && modoProxy !== "off";
   const preferirDireto = estaEmArquivoLocal() || hostLocal();
   const preferirProxy = modoProxy === "on" || (!preferirDireto && modoProxy !== "off");
+  const httpsEquivalente = urlHttpsEquivalente(url);
 
-  if (temProxy && preferirProxy) adicionar(montarUrlProxy(proxy, url), "proxy");
-  if (urlDiretaPermitida(url)) adicionar(url, "direto");
-  if (temProxy && !preferirProxy) adicionar(montarUrlProxy(proxy, url), "proxy");
+  // Para listas M3U grandes, tentar HTTPS direto antes do proxy evita
+  // transferir dezenas/centenas de MB pelas Functions do Cloudflare.
+  if (config.preferirDireto && modoProxy !== "on") {
+    if (httpsEquivalente && urlDiretaPermitida(httpsEquivalente)) adicionar(httpsEquivalente, "direto-https");
+    if (urlDiretaPermitida(url)) adicionar(url, "direto");
+    if (temProxy) adicionar(montarUrlProxy(proxy, url), "proxy");
+  } else {
+    if (temProxy && preferirProxy) adicionar(montarUrlProxy(proxy, url), "proxy");
+    if (httpsEquivalente && urlDiretaPermitida(httpsEquivalente)) adicionar(httpsEquivalente, "direto-https");
+    if (urlDiretaPermitida(url)) adicionar(url, "direto");
+    if (temProxy && !preferirProxy) adicionar(montarUrlProxy(proxy, url), "proxy");
+  }
 
   // Proxies públicos gratuitos: último recurso quando o servidor IPTV não libera CORS.
   adicionar("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), "allorigins");
@@ -2426,26 +2657,64 @@ function candidatosDeBusca(url) {
   return lista;
 }
 
+async function lerCorpoComoTexto(resposta, aoProgredir, aoReceber) {
+  const tamanho = Number(resposta.headers.get("content-length")) || 0;
+  if (!resposta.body || typeof resposta.body.getReader !== "function" || typeof TextDecoder === "undefined") {
+    return resposta.text();
+  }
+  const leitor = resposta.body.getReader();
+  const decodificador = new TextDecoder("utf-8");
+  const partes = [];
+  let recebidos = 0;
+
+  while (true) {
+    const leitura = await leitor.read();
+    if (leitura.done) break;
+    if (leitura.value && leitura.value.byteLength) {
+      recebidos += leitura.value.byteLength;
+      partes.push(decodificador.decode(leitura.value, { stream: true }));
+      if (aoReceber) aoReceber(recebidos);
+      if (aoProgredir) aoProgredir(recebidos, tamanho);
+    }
+  }
+  partes.push(decodificador.decode());
+  return partes.join("");
+}
+
 async function fetchTextoSeguro(url, opcoes) {
   const config = opcoes || {};
-  const tentativas = candidatosDeBusca(url);
+  const candidatos = candidatosDeBusca(url, config).filter(function (tentativa) {
+    if (!config.semProxiesPublicos) return true;
+    return tentativa.rotulo !== "allorigins" && tentativa.rotulo !== "corsproxy" && tentativa.rotulo !== "codetabs";
+  });
   let ultimoStatus = 0;
   let ultimoErro = null;
   let erroProxy = "";
+  let encontrouHtml = false;
 
-  for (let i = 0; i < tentativas.length; i += 1) {
-    const tentativa = tentativas[i];
+  for (let i = 0; i < candidatos.length; i += 1) {
+    const tentativa = candidatos[i];
     const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const limite = (tentativa.rotulo === "direto" || tentativa.rotulo === "proxy")
+    const limite = (tentativa.rotulo === "proxy" || tentativa.rotulo.indexOf("direto") === 0)
       ? (config.timeout || 18000)
       : (config.timeoutPublico || 9000);
-    const timer = controller ? setTimeout(function () { controller.abort(); }, limite) : null;
+    let timer = null;
+
+    function agendarLimite(ms) {
+      if (!controller) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { controller.abort(); }, ms);
+    }
+
+    agendarLimite(limite);
 
     try {
       const resposta = await fetch(tentativa.url, {
         cache: "no-store",
         signal: controller ? controller.signal : undefined
       });
+
+      agendarLimite(config.bodyTimeout || 60000);
 
       if (!resposta.ok) {
         ultimoStatus = resposta.status;
@@ -2454,26 +2723,51 @@ async function fetchTextoSeguro(url, opcoes) {
           const textoErro = await resposta.text();
           if (textoErro && textoErro.length < 600) detalhe = textoErro;
         } catch (erroLeitura) {}
-        if (tentativa.rotulo === "proxy" && detalhe) {
-          try {
-            const json = JSON.parse(detalhe);
-            if (json && json.details) erroProxy = String(json.details);
-            else if (json && json.error) erroProxy = String(json.error);
-          } catch (erroJson) {
-            erroProxy = detalhe;
+        if (tentativa.rotulo === "proxy") {
+          if (/^\s*<!DOCTYPE html|<html[\s>]/i.test(detalhe)) {
+            erroProxy = "A rota /api/proxy respondeu uma página HTML. A pasta functions/api/proxy.js não foi publicada no Cloudflare Pages.";
+          } else if (detalhe) {
+            try {
+              const json = JSON.parse(detalhe);
+              if (json && json.details) erroProxy = String(json.details);
+              else if (json && json.error) erroProxy = String(json.error);
+            } catch (erroJson) {
+              erroProxy = detalhe;
+            }
           }
         }
         throw new Error("HTTP_" + resposta.status);
       }
 
-      const texto = await resposta.text();
+      const texto = await lerCorpoComoTexto(
+        resposta,
+        config.onProgress,
+        function () { agendarLimite(config.stallTimeout || 45000); }
+      );
+
       if (!texto || !texto.trim()) throw new Error("RESPOSTA_VAZIA");
       if (tentativa.rotulo === "proxy" && /^\s*<!DOCTYPE html|<html[\s>]/i.test(texto)) {
+        erroProxy = "A rota /api/proxy devolveu HTML em vez da lista. Confirme se a pasta functions foi publicada.";
         throw new Error("PROXY_NAO_PUBLICADO");
+      }
+      if (typeof config.validarTexto === "function") {
+        const motivo = config.validarTexto(texto, tentativa);
+        if (motivo) {
+          if (motivo === "M3U_HTML") encontrouHtml = true;
+          throw new Error(motivo);
+        }
       }
       return { texto: texto, via: tentativa.rotulo };
     } catch (erro) {
       ultimoErro = erro;
+      if (tentativa.rotulo === "proxy" && !erroProxy) {
+        if (erro && erro.name === "AbortError") {
+          erroProxy = "O /api/proxy demorou demais para baixar a lista. Verifique os limites do Cloudflare Pages Functions.";
+        } else {
+          erroProxy = "Falha ao acessar /api/proxy: " + (erro && erro.message ? erro.message : "erro de rede") +
+            ". Confirme se as Functions foram publicadas.";
+        }
+      }
       console.warn("Falha ao buscar (" + tentativa.rotulo + "):", sanitizarUrl(url), erro && erro.message ? erro.message : erro);
     } finally {
       if (timer) clearTimeout(timer);
@@ -2487,6 +2781,7 @@ async function fetchTextoSeguro(url, opcoes) {
   }
   if (ultimoStatus === 404) throw new Error("NOT_FOUND");
   if (ultimoStatus >= 500) throw new Error("SERVER_ERROR_" + ultimoStatus);
+  if (encontrouHtml) throw new Error("M3U_HTML");
   const erroRede = new Error("NETWORK_ERROR");
   erroRede.detalheProxy = erroProxy;
   erroRede.causa = ultimoErro;
@@ -2623,15 +2918,31 @@ function agruparSeriesM3u(itens) {
   const mapa = new Map();
   const semEpisodio = [];
   const lista = Array.isArray(itens) ? itens : [];
+  const cacheSeries = new Map();
+  const cacheNomes = new Map();
+
+  function normalizarComCache(valor) {
+    const chave = String(valor == null ? "" : valor);
+    if (cacheNomes.has(chave)) return cacheNomes.get(chave);
+    const resultado = normalizarTexto(chave);
+    cacheNomes.set(chave, resultado);
+    return resultado;
+  }
 
   lista.forEach(function (item, indice) {
-    const info = extrairInfoEpisodio(item.name);
+    const info = item._infoEpisodio || extrairInfoEpisodio(item.name);
     if (!info) {
       semEpisodio.push(item);
       return;
     }
 
-    const chave = normalizarTexto(info.serie) + "|" + (item.category_id || "");
+    const nomeSerie = String(info.serie || "");
+    let nomeNormalizado = cacheSeries.get(nomeSerie);
+    if (nomeNormalizado == null) {
+      nomeNormalizado = normalizarComCache(nomeSerie);
+      cacheSeries.set(nomeSerie, nomeNormalizado);
+    }
+    const chave = nomeNormalizado + "|" + (item.category_id || "");
     let serie = mapa.get(chave);
     if (!serie) {
       serie = {
@@ -2653,7 +2964,7 @@ function agruparSeriesM3u(itens) {
   });
 
   semEpisodio.forEach(function (item, indice) {
-    const chave = normalizarTexto(item.name) + "|" + (item.category_id || "");
+    const chave = normalizarComCache(item.name) + "|" + (item.category_id || "");
     if (mapa.has(chave)) return;
     mapa.set(chave, {
       series_id: "m3u_serie_unica_" + (mapa.size + 1) + "_" + indice,
@@ -2687,8 +2998,17 @@ function parsearM3u(texto, urlBase) {
   const canais = [];
   const filmes = [];
   const seriesBrutas = [];
+  const cacheCategorias = new Map();
   let metaAtual = null;
   let grupoExtra = "";
+
+  function categoriaNormalizada(valor) {
+    const chave = String(valor == null ? "" : valor);
+    if (cacheCategorias.has(chave)) return cacheCategorias.get(chave);
+    const resultado = normalizarTexto(chave);
+    cacheCategorias.set(chave, resultado);
+    return resultado;
+  }
 
   for (let i = 0; i < linhas.length; i += 1) {
     const linha = linhas[i].trim();
@@ -2704,7 +3024,7 @@ function parsearM3u(texto, urlBase) {
         stream_id: "m3u_" + (i + 1),
         stream_icon: atributos["tvg-logo"] || "",
         category_name: categoria,
-        category_id: normalizarTexto(categoria) || "geral",
+        category_id: categoriaNormalizada(categoria) || "geral",
         tvg_id: atributos["tvg-id"] || ""
       };
       grupoExtra = "";
@@ -2715,7 +3035,7 @@ function parsearM3u(texto, urlBase) {
       grupoExtra = linha.replace(/^#EXTGRP:/i, "").trim();
       if (metaAtual && grupoExtra) {
         metaAtual.category_name = grupoExtra;
-        metaAtual.category_id = normalizarTexto(grupoExtra) || metaAtual.category_id;
+        metaAtual.category_id = categoriaNormalizada(grupoExtra) || metaAtual.category_id;
       }
       continue;
     }
@@ -2729,20 +3049,24 @@ function parsearM3u(texto, urlBase) {
     }
 
     const lower = streamUrl.toLowerCase();
-    const normGroup = normalizarTexto(metaAtual.category_name || "");
+    const normGroup = categoriaNormalizada(metaAtual.category_name || "");
     const item = Object.assign({}, metaAtual, {
       direct_source: streamUrl,
       stream_url: streamUrl
     });
 
+    const grupoPareceSerie = normGroup.includes("serie") || normGroup.includes("temporada");
+    const infoEpisodio = (lower.includes("/series/") || grupoPareceSerie)
+      ? extrairInfoEpisodio(metaAtual.name)
+      : null;
     const pareceSerie =
       lower.includes("/series/") ||
-      normGroup.includes("serie") ||
-      normGroup.includes("temporada") ||
-      Boolean(extrairInfoEpisodio(metaAtual.name));
+      grupoPareceSerie ||
+      Boolean(infoEpisodio);
 
     if (pareceSerie) {
       item._tipo = "serie";
+      if (infoEpisodio) item._infoEpisodio = infoEpisodio;
       seriesBrutas.push(item);
     } else if (
       lower.includes("/movie/") ||
@@ -2795,6 +3119,385 @@ function salvarJSON(chave, valor) {
   try { localStorage.setItem(chave, JSON.stringify(valor)); } catch (erro) {}
 }
 
+/* ---------- Progresso de reprodução (continuar de onde parou) ---------- */
+function hashProgresso(texto) {
+  const valor = String(texto || "");
+  let hash = 2166136261;
+  for (let i = 0; i < valor.length; i += 1) {
+    hash ^= valor.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function obterMapaProgresso() {
+  if (progressoCache && typeof progressoCache === "object") return progressoCache;
+  try {
+    const bruto = localStorage.getItem(CHAVE_PROGRESSO);
+    const dados = bruto ? JSON.parse(bruto) : null;
+    progressoCache = dados && typeof dados === "object" && !Array.isArray(dados) ? dados : {};
+  } catch (erro) {
+    progressoCache = {};
+  }
+  return progressoCache;
+}
+
+function salvarMapaProgresso() {
+  if (!progressoCache || typeof progressoCache !== "object") return;
+  salvarJSON(CHAVE_PROGRESSO, progressoCache);
+}
+
+function podarProgresso(mapa) {
+  const chaves = Object.keys(mapa);
+  if (chaves.length <= 300) return;
+  chaves.sort(function (a, b) {
+    return (Number(mapa[b] && mapa[b].atualizado) || 0) - (Number(mapa[a] && mapa[a].atualizado) || 0);
+  });
+  chaves.slice(300).forEach(function (chave) { delete mapa[chave]; });
+}
+
+function obterMapaUltimosEpisodios() {
+  if (ultimosEpisodiosCache && typeof ultimosEpisodiosCache === "object") return ultimosEpisodiosCache;
+  try {
+    const bruto = localStorage.getItem(CHAVE_ULTIMOS_EPISODIOS);
+    const dados = bruto ? JSON.parse(bruto) : null;
+    ultimosEpisodiosCache = dados && typeof dados === "object" && !Array.isArray(dados) ? dados : {};
+  } catch (erro) {
+    ultimosEpisodiosCache = {};
+  }
+  return ultimosEpisodiosCache;
+}
+
+function salvarMapaUltimosEpisodios() {
+  if (!ultimosEpisodiosCache || typeof ultimosEpisodiosCache !== "object") return;
+  salvarJSON(CHAVE_ULTIMOS_EPISODIOS, ultimosEpisodiosCache);
+}
+
+function chaveProgressoFilme(item) {
+  const base = item && (item.direct_source || item.stream_url)
+    ? String(item.direct_source || item.stream_url)
+    : String(idDoItem(item, "filme") || "") + "|" + String(item && item.name || "");
+  return "filme:" + hashProgresso(base);
+}
+
+function chaveProgressoEpisodio(episodio, temporada, numero) {
+  const base = episodio && (episodio.direct_source || episodio.stream_url)
+    ? String(episodio.direct_source || episodio.stream_url)
+    : [
+        String(currentSerieId != null ? currentSerieId : ""),
+        String(currentSerieName || ""),
+        String(temporada != null ? temporada : ""),
+        String(numero != null ? numero : ""),
+        String(episodio && (episodio.id != null ? episodio.id : episodio.episode_id) || "")
+      ].join("|");
+  return "episodio:" + hashProgresso(base);
+}
+
+function chaveSerieProgresso(seriesId, seriesName) {
+  const id = seriesId != null ? String(seriesId) : "";
+  const nome = normalizarTexto(seriesName || "");
+  return "serie:" + hashProgresso(nome + "|" + id);
+}
+
+function obterProgresso(chave) {
+  if (!chave) return null;
+  const mapa = obterMapaProgresso();
+  const registro = mapa[chave];
+  if (!registro || typeof registro !== "object") return null;
+  const segundos = Number(registro.segundos);
+  if (!Number.isFinite(segundos) || segundos < MIN_SEGUNDOS_RETOMAR) return null;
+  return registro;
+}
+
+function removerProgresso(chave) {
+  if (!chave) return;
+  const mapa = obterMapaProgresso();
+  if (!Object.prototype.hasOwnProperty.call(mapa, chave)) return;
+  delete mapa[chave];
+  salvarMapaProgresso();
+}
+
+function podarUltimosEpisodios(mapa) {
+  const chaves = Object.keys(mapa);
+  if (chaves.length <= 120) return;
+  chaves.sort(function (a, b) {
+    return (Number(mapa[b] && mapa[b].atualizado) || 0) - (Number(mapa[a] && mapa[a].atualizado) || 0);
+  });
+  chaves.slice(120).forEach(function (chave) { delete mapa[chave]; });
+}
+
+function registrarUltimoEpisodioSerie(serieChave, dados) {
+  if (!serieChave || !dados) return;
+  const mapa = obterMapaUltimosEpisodios();
+  mapa[serieChave] = Object.assign({}, dados, { atualizado: Date.now() });
+  podarUltimosEpisodios(mapa);
+  salvarMapaUltimosEpisodios();
+}
+
+function obterUltimoEpisodioSerie(item) {
+  if (!item) return null;
+  const seriesId = item._m3u ? null : (item.series_id != null ? item.series_id : item.id);
+  const serieChave = chaveSerieProgresso(seriesId, item.name);
+  const mapa = obterMapaUltimosEpisodios();
+  let ultimo = mapa[serieChave] && typeof mapa[serieChave] === "object" ? Object.assign({}, mapa[serieChave]) : null;
+
+  if (!ultimo && item.ultimoEpisodio && typeof item.ultimoEpisodio === "object") {
+    ultimo = {
+      temporada: item.ultimoEpisodio.temporada,
+      episodio: item.ultimoEpisodio.episodio,
+      id: item.ultimoEpisodio.id,
+      titulo: item.ultimoEpisodio.titulo
+    };
+  }
+
+  if (!ultimo) {
+    const progresso = obterMapaProgresso();
+    let maisRecente = 0;
+    Object.keys(progresso).forEach(function (chave) {
+      const registro = progresso[chave];
+      if (!registro || registro.tipo !== "episodio" || registro.serieChave !== serieChave) return;
+      const atualizado = Number(registro.atualizado) || 0;
+      if (atualizado <= maisRecente) return;
+      maisRecente = atualizado;
+      ultimo = Object.assign({}, registro, { chave: chave });
+    });
+  }
+
+  if (ultimo && !ultimo.chave) {
+    const chave = "episodio:" + hashProgresso([
+      String(seriesId != null ? seriesId : ""),
+      String(item.name || ""),
+      String(ultimo.temporada != null ? ultimo.temporada : ""),
+      String(ultimo.episodio != null ? ultimo.episodio : ""),
+      String(ultimo.id != null ? ultimo.id : "")
+    ].join("|"));
+    ultimo.chave = chave;
+  }
+  return ultimo;
+}
+
+function progressoDoItem(item, tipo) {
+  if (!item || tipo === "canal") return null;
+  if (tipo === "filme") return obterProgresso(chaveProgressoFilme(item));
+  if (tipo === "serie") {
+    const ultimo = obterUltimoEpisodioSerie(item);
+    return ultimo && ultimo.chave ? obterProgresso(ultimo.chave) : null;
+  }
+  return null;
+}
+
+function formatarTempoMidia(segundos) {
+  const total = Math.max(0, Math.floor(Number(segundos) || 0));
+  const horas = Math.floor(total / 3600);
+  const minutos = Math.floor((total % 3600) / 60);
+  const restantes = total % 60;
+  if (horas > 0) return horas + "h " + String(minutos).padStart(2, "0") + "min";
+  return String(minutos).padStart(2, "0") + ":" + String(restantes).padStart(2, "0");
+}
+
+function formatarBytes(bytes) {
+  const valor = Number(bytes) || 0;
+  const mb = valor / (1024 * 1024);
+  if (mb >= 1024) return (mb / 1024).toFixed(1).replace(".", ",") + " GB";
+  return Math.max(1, Math.round(mb)) + " MB";
+}
+
+function mostrarOverlayRetomar(registro) {
+  const overlay = $("#resumeOverlay");
+  if (!overlay || !registro) return;
+  const segundos = Number(registro.segundos) || 0;
+  const duracao = Number(registro.duracao) || 0;
+  const info = $("#resumeInfo");
+  const botao = $("#resumeContinueBtn");
+  const barra = $("#resumeBar");
+  if (info) {
+    info.textContent = "Você parou em " + formatarTempoMidia(segundos) +
+      (duracao > 0 ? " de " + formatarTempoMidia(duracao) : "") + ".";
+  }
+  if (botao) botao.textContent = "▶ Continuar de " + formatarTempoMidia(segundos);
+  if (barra) {
+    const percentual = duracao > 0 ? Math.max(2, Math.min(100, (segundos / duracao) * 100)) : 2;
+    barra.style.width = percentual + "%";
+  }
+  overlay.classList.remove("hidden");
+}
+
+function ocultarOverlayRetomar() {
+  const overlay = $("#resumeOverlay");
+  if (overlay) overlay.classList.add("hidden");
+}
+
+function talvezMostrarOverlayRetomar() {
+  const video = $("#videoPlayer");
+  if (!video || !pendingResume) {
+    ocultarOverlayRetomar();
+    return;
+  }
+  const segundos = Number(pendingResume.segundos) || 0;
+  const duracao = Number(video.duration) || Number(pendingResume.duracao) || 0;
+  if (segundos < MIN_SEGUNDOS_RETOMAR) {
+    pendingResume = null;
+    ocultarOverlayRetomar();
+    return;
+  }
+  if (duracao > 0 && (segundos >= duracao - 10 || segundos / duracao >= 0.97)) {
+    pendingResume = null;
+    ocultarOverlayRetomar();
+    return;
+  }
+  try { video.pause(); } catch (erro) {}
+  mostrarOverlayRetomar(pendingResume);
+}
+
+function retomarProgresso() {
+  const video = $("#videoPlayer");
+  if (!video || !pendingResume) {
+    ocultarOverlayRetomar();
+    return;
+  }
+  const segundos = Number(pendingResume.segundos) || 0;
+  try { video.currentTime = Math.max(0, segundos); } catch (erro) {}
+  ocultarOverlayRetomar();
+  pendingResume = null;
+  tentarReproduzirVideo(video);
+  exibirToast("▶ Continuando de " + formatarTempoMidia(segundos));
+}
+
+function reiniciarProgresso() {
+  const video = $("#videoPlayer");
+  if (currentPlayback && currentPlayback.chave) removerProgresso(currentPlayback.chave);
+  pendingResume = null;
+  try {
+    if (video) video.currentTime = 0;
+  } catch (erro) {}
+  ocultarOverlayRetomar();
+  if (video) tentarReproduzirVideo(video);
+}
+
+function configurarPlaybackAtual(dados) {
+  currentPlayback = dados || null;
+  pendingResume = null;
+  ocultarOverlayRetomar();
+  if (!dados || dados.tipo === "canal" || !dados.chave) return;
+  const registro = obterProgresso(dados.chave);
+  if (!registro) return;
+  pendingResume = registro;
+  const video = $("#videoPlayer");
+  if (video && video.readyState >= 1) {
+    setTimeout(function () {
+      if (video === $("#videoPlayer")) talvezMostrarOverlayRetomar();
+    }, 80);
+  }
+}
+
+function salvarProgressoAtual() {
+  const video = $("#videoPlayer");
+  if (!video || !currentPlayback || !currentPlayback.chave) return;
+  if (currentPlayback.tipo === "canal") return;
+  const duracao = Number(video.duration);
+  const tempo = Number(video.currentTime);
+  if (!Number.isFinite(duracao) || duracao < 30 || !Number.isFinite(tempo)) return;
+  const chave = currentPlayback.chave;
+  const mapa = obterMapaProgresso();
+  const pertoDoFim = tempo >= duracao - 20 || tempo / duracao >= 0.96;
+  if (pertoDoFim) {
+    if (Object.prototype.hasOwnProperty.call(mapa, chave)) {
+      delete mapa[chave];
+      salvarMapaProgresso();
+    }
+    return;
+  }
+  if (tempo < MIN_SEGUNDOS_RETOMAR) return;
+  mapa[chave] = {
+    segundos: Math.floor(tempo),
+    duracao: Math.floor(duracao),
+    atualizado: Date.now(),
+    tipo: currentPlayback.tipo,
+    titulo: currentPlayback.titulo || "",
+    serieChave: currentPlayback.serieChave || "",
+    serieNome: currentPlayback.serieNome || "",
+    temporada: currentPlayback.temporada || 0,
+    episodio: currentPlayback.episodio || 0,
+    idEpisodio: currentPlayback.idEpisodio || ""
+  };
+  podarProgresso(mapa);
+  salvarMapaProgresso();
+}
+
+function atualizarProgressoPeriodico() {
+  const agora = Date.now();
+  if (agora - ultimoSalvamentoProgresso < INTERVALO_SALVAR_PROGRESSO) return;
+  ultimoSalvamentoProgresso = agora;
+  salvarProgressoAtual();
+}
+
+/* ---------- Volume do player ---------- */
+function obterVolumeSalvo() {
+  const valor = Number(storageGet("volume_player", "1"));
+  if (!Number.isFinite(valor)) return 1;
+  return Math.max(0, Math.min(1, valor));
+}
+
+function atualizarInterfaceVolume(video) {
+  const slider = $("#volumeSlider");
+  const rotulo = $("#volumeLabel");
+  const botaoMudo = $("#btnMute");
+  const alvo = video || $("#videoPlayer");
+  if (!alvo) return;
+  const volume = Math.max(0, Math.min(1, Number(alvo.volume)));
+  const mutado = Boolean(alvo.muted) || volume === 0;
+  if (slider) slider.value = String(Math.round(volume * 100));
+  if (rotulo) rotulo.textContent = mutado ? "Mudo" : Math.round(volume * 100) + "%";
+  if (botaoMudo) {
+    botaoMudo.textContent = mutado ? "🔇" : (volume < 0.5 ? "🔉" : "🔊");
+    botaoMudo.setAttribute("aria-label", mutado ? "Ativar som" : "Silenciar");
+  }
+}
+
+function aplicarVolume(valor, salvar) {
+  const video = $("#videoPlayer");
+  const volume = Math.max(0, Math.min(1, Number(valor)));
+  if (!Number.isFinite(volume)) return;
+  if (video) {
+    try {
+      video.muted = volume === 0;
+      video.volume = volume;
+    } catch (erro) {}
+  }
+  if (salvar !== false) storageSet("volume_player", String(volume));
+  if (volume > 0) volumeAnteriorMudo = volume;
+  atualizarInterfaceVolume(video);
+}
+
+function playerVolume(valor) {
+  aplicarVolume(Number(valor) / 100, true);
+}
+
+function playerVolumeUp() {
+  const video = $("#videoPlayer");
+  const atual = video ? Number(video.volume) : obterVolumeSalvo();
+  aplicarVolume(Math.min(1, (Number.isFinite(atual) ? atual : 1) + 0.1), true);
+}
+
+function playerVolumeDown() {
+  const video = $("#videoPlayer");
+  const atual = video ? Number(video.volume) : obterVolumeSalvo();
+  aplicarVolume(Math.max(0, (Number.isFinite(atual) ? atual : 1) - 0.1), true);
+}
+
+function playerMute() {
+  const video = $("#videoPlayer");
+  if (!video) return;
+  if (video.muted || Number(video.volume) === 0) {
+    video.muted = false;
+    aplicarVolume(volumeAnteriorMudo > 0 ? volumeAnteriorMudo : 0.8, true);
+    return;
+  }
+  volumeAnteriorMudo = Number(video.volume) || 1;
+  video.muted = true;
+  atualizarInterfaceVolume(video);
+}
+
 function esc(valor) {
   return String(valor == null ? "" : valor).replace(/[&<>"']/g, function (caractere) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[caractere];
@@ -2833,8 +3536,12 @@ function apiUrl(acao, parametros) {
   return construirApiUrl(activeServerUrl, activeUser, activePass, acao, parametros);
 }
 
-async function fetchJson(url) {
-  const resultado = await fetchTextoSeguro(url, { timeout: 18000 });
+async function fetchJson(url, opcoes) {
+  const resultado = await fetchTextoSeguro(url, Object.assign({
+    timeout: 60000,
+    bodyTimeout: 90000,
+    stallTimeout: 60000
+  }, opcoes || {}));
   const texto = String(resultado.texto || "").replace(/^\uFEFF/, "");
   try {
     return JSON.parse(texto);
@@ -2844,11 +3551,82 @@ async function fetchJson(url) {
   }
 }
 
-async function fetchPlaylistM3u(url) {
-  const resultado = await fetchTextoSeguro(url, { timeout: 30000, timeoutPublico: 12000 });
+async function fetchPlaylistM3u(url, aoProgredir) {
+  const resultado = await fetchTextoSeguro(url, {
+    timeout: 30000,
+    timeoutPublico: 12000,
+    bodyTimeout: 180000,
+    stallTimeout: 45000,
+    preferirDireto: true,
+    onProgress: aoProgredir,
+    validarTexto: function (texto) {
+      if (/^\s*<!DOCTYPE html|<html[\s>]/i.test(texto)) return "M3U_HTML";
+      return "";
+    }
+  });
   const texto = String(resultado.texto || "").replace(/^\uFEFF/, "");
   if (/^\s*<!DOCTYPE html|<html[\s>]/i.test(texto)) throw new Error("M3U_HTML");
   return texto;
+}
+
+function extrairCredenciaisM3u(valor) {
+  try {
+    const alvo = new URL(String(valor || "").trim());
+    if (!/^https?:$/i.test(alvo.protocol)) return null;
+    if (!/\/get\.php$/i.test(alvo.pathname)) return null;
+    const usuario = alvo.searchParams.get("username") || alvo.searchParams.get("user") || "";
+    const senha = alvo.searchParams.get("password") || alvo.searchParams.get("pass") || "";
+    if (!usuario || !senha) return null;
+    const caminho = alvo.pathname.replace(/\/get\.php$/i, "").replace(/\/+$/, "");
+    return {
+      base: alvo.origin + caminho,
+      usuario: usuario,
+      senha: senha
+    };
+  } catch (erro) {
+    return null;
+  }
+}
+
+async function carregarCatalogoXtream(urlBase, usuario, senha, opcoes) {
+  const config = opcoes || {};
+  const autenticacao = await fetchJson(
+    construirApiUrl(urlBase, usuario, senha),
+    config.autenticacao || { semProxiesPublicos: true, timeout: 20000, bodyTimeout: 30000 }
+  );
+  const info = autenticacao && autenticacao.user_info;
+  const autenticado = info && (Number(info.auth) === 1 || String(info.status).toLowerCase() === "active");
+  if (!autenticado) throw new Error("AUTH");
+
+  activeServerUrl = urlBase;
+  activeUser = usuario;
+  activePass = senha;
+  streamBaseFilmes = urlBase + "/movie";
+  streamBaseSeries = urlBase + "/series";
+  streamBaseCanais = urlBase + "/live";
+
+  if (config.aoStatus) config.aoStatus("Carregando catálogo...");
+
+  const respostas = await Promise.all([
+    fetchJson(apiUrl("get_vod_streams"), config.catalogo || {}),
+    fetchJson(apiUrl("get_series"), config.catalogo || {}),
+    fetchJson(apiUrl("get_live_streams"), config.catalogo || {}),
+    fetchJson(apiUrl("get_vod_categories"), config.catalogo || {}),
+    fetchJson(apiUrl("get_series_categories"), config.catalogo || {}),
+    fetchJson(apiUrl("get_live_categories"), config.catalogo || {})
+  ]);
+
+  todosFilmes = normalizarLista(respostas[0]);
+  todosSeries = normalizarLista(respostas[1]);
+  todosCanais = normalizarLista(respostas[2]);
+  categoriasFilmes = prepararCategorias(todosFilmes, respostas[3]);
+  categoriasSeries = prepararCategorias(todosSeries, respostas[4]);
+  categoriasCanais = prepararCategorias(todosCanais, respostas[5]);
+
+  if (!todosFilmes.length && !todosSeries.length && !todosCanais.length) {
+    throw new Error("CATALOGO_VAZIO");
+  }
+  return info;
 }
 
 function lerArquivoTexto(arquivo) {
@@ -3006,7 +3784,7 @@ function cancelarCliquePendente() {
   ultimoCardChave = "";
 }
 
-function pararVideoAtual() {
+function pararVideoAtual(manterRetomada) {
   if (hlsInstance) {
     try {
       hlsInstance.detachMedia();
@@ -3032,6 +3810,10 @@ function pararVideoAtual() {
   currentStreamUrl = "";
   currentStreamOriginal = "";
   currentEpisode = null;
+  if (!manterRetomada) {
+    pendingResume = null;
+    ocultarOverlayRetomar();
+  }
 }
 
 function obterFavoritos() {
@@ -3077,7 +3859,11 @@ function resolverItemCompleto(item, tipo) {
     const encontrado = todosSeries.find(function (serie) {
       return String(serie.series_id) === String(item.series_id);
     });
-    if (encontrado) return encontrado;
+    if (encontrado) {
+      return Object.assign({}, encontrado, {
+        ultimoEpisodio: item.ultimoEpisodio || encontrado.ultimoEpisodio
+      });
+    }
   }
   return item;
 }
@@ -3234,6 +4020,11 @@ function preencherLoginSalvo() {
   if (lembrar) lembrar.checked = true;
 }
 
+function definirStatusLogin(texto) {
+  const botao = $("#btnEntrar");
+  if (botao) botao.textContent = texto;
+}
+
 async function entrar(event) {
   if (event) event.preventDefault();
   if (loginEmAndamento) return;
@@ -3284,49 +4075,62 @@ async function entrar(event) {
   }
 
   try {
-    if (ehM3u) {
-      let textoM3u = "";
-      let baseM3u = url;
+    let carregouModoRapido = false;
 
-      if (arquivoM3uSelecionado) {
-        console.log("Lendo arquivo M3U local:", arquivoM3uSelecionado.name, arquivoM3uSelecionado.size, "bytes");
-        textoM3u = await lerArquivoTexto(arquivoM3uSelecionado);
-      } else {
-        console.log("Baixando playlist M3U:", sanitizarUrl(url));
-        textoM3u = await fetchPlaylistM3u(url);
+    if (ehM3u) {
+      if (!arquivoM3uSelecionado) {
+        const credenciais = extrairCredenciaisM3u(url);
+        const podeTentarApi = Boolean(credenciais) && Boolean(obterProxyBase());
+        if (podeTentarApi) {
+          try {
+            console.log("Lista M3U com credenciais: tentando catálogo rápido via Xtream Codes...");
+            definirStatusLogin("Conectando...");
+            await carregarCatalogoXtream(credenciais.base, credenciais.usuario, credenciais.senha, {
+              aoStatus: definirStatusLogin,
+              autenticacao: {
+                semProxiesPublicos: true,
+                timeout: 15000,
+                bodyTimeout: 25000,
+                stallTimeout: 25000
+              }
+            });
+            carregouModoRapido = true;
+            console.log("Catálogo carregado via Xtream Codes (modo rápido).");
+          } catch (erroRapido) {
+            console.warn("Modo rápido indisponível; carregando o arquivo M3U completo.", erroRapido);
+            definirStatusLogin("Baixando lista...");
+          }
+        }
       }
 
-      aplicarPlaylistM3u(textoM3u, baseM3u);
+      if (!carregouModoRapido) {
+        let textoM3u = "";
+        const baseM3u = url;
+
+        if (arquivoM3uSelecionado) {
+          console.log("Lendo arquivo M3U local:", arquivoM3uSelecionado.name, arquivoM3uSelecionado.size, "bytes");
+          textoM3u = await lerArquivoTexto(arquivoM3uSelecionado);
+        } else {
+          console.log("Baixando playlist M3U:", sanitizarUrl(url));
+          textoM3u = await fetchPlaylistM3u(url, function (recebidos, total) {
+            if (total > 0) {
+              const percentual = Math.min(100, Math.round((recebidos / total) * 100));
+              definirStatusLogin("Baixando " + percentual + "% • " + formatarBytes(recebidos));
+            } else {
+              definirStatusLogin("Baixando lista • " + formatarBytes(recebidos));
+            }
+          });
+        }
+
+        definirStatusLogin("Processando lista...");
+        await new Promise(function (resolve) { setTimeout(resolve, 60); });
+        aplicarPlaylistM3u(textoM3u, baseM3u);
+      }
     } else {
       // Modo Xtream Codes padrão
       console.log("Autenticando via Xtream Codes:", sanitizarUrl(url));
-      const autenticacao = await fetchJson(construirApiUrl(url, usuario, senha));
-      const info = autenticacao && autenticacao.user_info;
-      const autenticado = info && (Number(info.auth) === 1 || String(info.status).toLowerCase() === "active");
-      if (!autenticado) throw new Error("AUTH");
-
-      activeServerUrl = url;
-      activeUser = usuario;
-      activePass = senha;
-      streamBaseFilmes = url + "/movie";
-      streamBaseSeries = url + "/series";
-      streamBaseCanais = url + "/live";
-
-      const respostas = await Promise.all([
-        fetchJson(apiUrl("get_vod_streams")),
-        fetchJson(apiUrl("get_series")),
-        fetchJson(apiUrl("get_live_streams")),
-        fetchJson(apiUrl("get_vod_categories")),
-        fetchJson(apiUrl("get_series_categories")),
-        fetchJson(apiUrl("get_live_categories"))
-      ]);
-
-      todosFilmes = normalizarLista(respostas[0]);
-      todosSeries = normalizarLista(respostas[1]);
-      todosCanais = normalizarLista(respostas[2]);
-      categoriasFilmes = prepararCategorias(todosFilmes, respostas[3]);
-      categoriasSeries = prepararCategorias(todosSeries, respostas[4]);
-      categoriasCanais = prepararCategorias(todosCanais, respostas[5]);
+      definirStatusLogin("Conectando...");
+      await carregarCatalogoXtream(url, usuario, senha);
     }
 
     currentItem = null;
@@ -3343,6 +4147,9 @@ async function entrar(event) {
     const busca = $("#buscaGlobal");
     if (busca) busca.value = "";
     renderTelaPrincipal();
+    if (carregouModoRapido) {
+      setTimeout(function () { exibirToast("✅ Lista carregada no modo rápido (Xtream)."); }, 350);
+    }
   } catch (erro) {
     console.error("Erro durante login/carregamento:", erro);
     activeServerUrl = "";
@@ -3358,6 +4165,7 @@ async function entrar(event) {
     categoriasSeries = [];
     categoriasCanais = [];
     limparIntervaloSlideshow();
+    salvarProgressoAtual();
     pararVideoAtual();
     fecharMenu();
 
@@ -3388,6 +4196,8 @@ async function entrar(event) {
       mensagem = "Resposta Inesperada:\nO servidor respondeu, mas não retornou uma lista IPTV válida. Verifique se o endereço é a raiz do servidor (ex: http://servidor.com:8080).";
     } else if (errCode === "M3U_VAZIO") {
       mensagem = "Lista M3U Vazia:\nA playlist foi lida com sucesso, mas nenhum canal, filme ou série válido foi encontrado no arquivo.";
+    } else if (errCode === "CATALOGO_VAZIO") {
+      mensagem = "Catálogo vazio:\nO servidor autenticou, mas não retornou filmes, séries ou canais. Confira se a linha está ativa.";
     } else if (errCode === "M3U_HTML") {
       mensagem = "O link retornou uma página HTML, não uma playlist M3U.\nUse o link direto da lista (ex: .../get.php?username=...&password=...&type=m3u_plus) ou baixe o arquivo .m3u e selecione-o na tela.";
     } else if (errCode === "ARQUIVO_ERRO" || errCode === "ARQUIVO_VAZIO") {
@@ -3499,6 +4309,16 @@ function criarCard(item, tipo) {
   marcador.setAttribute("aria-hidden", "true");
   if (!estaFavoritado(item, tipoFinal)) marcador.classList.add("hidden");
   poster.appendChild(marcador);
+
+  const progresso = progressoDoItem(item, tipoFinal);
+  if (progresso && Number(progresso.duracao) > 0) {
+    const barra = document.createElement("span");
+    barra.className = "card-progress";
+    const preenchimento = document.createElement("span");
+    preenchimento.style.width = Math.max(2, Math.min(100, (Number(progresso.segundos) / Number(progresso.duracao)) * 100)) + "%";
+    barra.appendChild(preenchimento);
+    poster.appendChild(barra);
+  }
 
   const tituloEl = document.createElement("div");
   tituloEl.className = "card-title";
@@ -3719,6 +4539,7 @@ function renderTelaPrincipal() {
   desconectarObservadoresGrade();
   clearTimeout(searchDebounce);
   searchDebounce = null;
+  salvarProgressoAtual();
   pararVideoAtual();
   buscaAtiva = false;
   currentItem = null;
@@ -3755,6 +4576,7 @@ function prepararNavegacao(limparBusca) {
   desconectarObservadoresGrade();
   clearTimeout(searchDebounce);
   searchDebounce = null;
+  salvarProgressoAtual();
   pararVideoAtual();
 
   if (limparBusca) {
@@ -4464,8 +5286,16 @@ function configurarEventosVideo() {
   if (video.dataset.hmsEventos === "1") return;
   video.dataset.hmsEventos = "1";
 
+  try {
+    const volumeSalvo = obterVolumeSalvo();
+    video.volume = volumeSalvo;
+    video.muted = volumeSalvo === 0;
+  } catch (erro) {}
+  atualizarInterfaceVolume(video);
+
   video.addEventListener("error", function () {
     if (video !== $("#videoPlayer")) return;
+    ocultarOverlayRetomar();
     if (!currentStreamUrl) return;
 
     const err = video.error;
@@ -4502,12 +5332,38 @@ function configurarEventosVideo() {
     mostrarFeedbackPlayer(titulo, texto, true, icone);
   });
 
+  video.addEventListener("loadedmetadata", function () {
+    if (video !== $("#videoPlayer")) return;
+    talvezMostrarOverlayRetomar();
+    atualizarInterfaceVolume(video);
+  });
+
   video.addEventListener("loadeddata", function () {
     if (video === $("#videoPlayer")) ocultarFeedbackPlayer();
   });
 
   video.addEventListener("playing", function () {
     if (video === $("#videoPlayer")) ocultarFeedbackPlayer();
+  });
+
+  video.addEventListener("timeupdate", function () {
+    if (video === $("#videoPlayer")) atualizarProgressoPeriodico();
+  });
+
+  video.addEventListener("pause", function () {
+    if (video === $("#videoPlayer")) salvarProgressoAtual();
+  });
+
+  video.addEventListener("ended", function () {
+    if (video !== $("#videoPlayer")) return;
+    if (currentPlayback && currentPlayback.chave) removerProgresso(currentPlayback.chave);
+    pendingResume = null;
+    ocultarOverlayRetomar();
+    salvarProgressoAtual();
+  });
+
+  video.addEventListener("volumechange", function () {
+    if (video === $("#videoPlayer")) atualizarInterfaceVolume(video);
   });
 }
 
@@ -4522,8 +5378,12 @@ async function definirStream(url, tipo, manterTentativa) {
   const original = String(currentStreamOriginal || url).trim();
   const tentativaId = ++streamGeneration;
 
+  // Salva a posição do conteúdo anterior antes de trocar o stream.
+  if (!manterTentativa) salvarProgressoAtual();
+
   // Interrompe e destrói qualquer instância anterior do Hls.js/mpegts.js ou vídeo em execução.
-  pararVideoAtual();
+  // Em uma nova tentativa (fallback), preserva a oferta de retomada em andamento.
+  pararVideoAtual(manterTentativa);
 
   currentStreamOriginal = original;
   if (!manterTentativa) streamTentouDireto = false;
@@ -4695,6 +5555,8 @@ function abrirTelaConteudo(url, item, tipo) {
   currentEpisodesData = {};
   currentSeasons = [];
   currentEpisode = null;
+  currentPlayback = null;
+  pendingResume = null;
   salvarAssistido(item);
 
   const home = $("#homeView");
@@ -4732,11 +5594,30 @@ function abrirTelaConteudo(url, item, tipo) {
               '<button type="button" onclick="abrirVLC()">VLC</button>' +
             '</div>' +
           '</div>' +
+          '<div id="resumeOverlay" class="resume-overlay hidden">' +
+            '<div class="resume-card">' +
+              '<span class="resume-kicker">Continuar assistindo</span>' +
+              '<h3>Retomar de onde parou?</h3>' +
+              '<p id="resumeInfo"></p>' +
+              '<div class="resume-actions">' +
+                '<button id="resumeContinueBtn" class="resume-btn continuar" type="button" onclick="retomarProgresso()">▶ Continuar</button>' +
+                '<button class="resume-btn" type="button" onclick="reiniciarProgresso()">↺ Assistir do início</button>' +
+              '</div>' +
+              '<div class="resume-progress"><span id="resumeBar"></span></div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
         '<div class="player-controls">' +
           '<button class="control-btn primario" type="button" onclick="playerPlay()" aria-label="Reproduzir">▶ Play</button>' +
           '<button class="control-btn" type="button" onclick="playerPause()" aria-label="Pausar">⏸ Pause</button>' +
           '<button class="control-btn" type="button" onclick="playerStop()" aria-label="Parar">⏹ Stop</button>' +
+          '<div class="volume-control" role="group" aria-label="Controle de volume">' +
+            '<button id="btnMute" class="volume-btn" type="button" onclick="playerMute()" aria-label="Silenciar">🔊</button>' +
+            '<button class="volume-btn" type="button" onclick="playerVolumeDown()" aria-label="Diminuir volume">−</button>' +
+            '<input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" step="5" value="100" oninput="playerVolume(this.value)" aria-label="Volume">' +
+            '<button class="volume-btn" type="button" onclick="playerVolumeUp()" aria-label="Aumentar volume">+</button>' +
+            '<span id="volumeLabel" class="volume-value">100%</span>' +
+          '</div>' +
           '<button class="control-btn" type="button" onclick="playerBack()" aria-label="Voltar 10 segundos">⏪ −10s</button>' +
           '<button class="control-btn" type="button" onclick="playerForward()" aria-label="Avançar 10 segundos">⏩ +10s</button>' +
           '<button class="control-btn" type="button" onclick="toggleFullScreen()" aria-label="Tela cheia">⛶ Tela cheia</button>' +
@@ -4774,13 +5655,26 @@ function abrirTelaConteudo(url, item, tipo) {
   } else {
     const endereco = url || gerarUrlStream(item, tipoFinal);
     currentStreamOriginal = endereco;
+    currentPlayback = null;
     definirStream(endereco, tipoFinal);
+    if (tipoFinal === "filme") {
+      configurarPlaybackAtual({
+        chave: chaveProgressoFilme(item),
+        tipo: "filme",
+        titulo: nome
+      });
+    }
   }
 }
 
 function playerPlay() {
   const video = $("#videoPlayer");
   if (!video) return;
+  const overlay = $("#resumeOverlay");
+  if (overlay && !overlay.classList.contains("hidden")) {
+    exibirToast("Escolha continuar de onde parou ou assistir do início.");
+    return;
+  }
   if (!video.getAttribute("src") && !hlsInstance && !mpegtsInstance) return;
   tentarReproduzirVideo(video);
 }
@@ -4795,6 +5689,9 @@ function playerPause() {
 function playerStop() {
   const video = $("#videoPlayer");
   if (!video) return;
+  if (currentPlayback && currentPlayback.chave) removerProgresso(currentPlayback.chave);
+  pendingResume = null;
+  ocultarOverlayRetomar();
   try {
     video.pause();
     video.currentTime = 0;
@@ -5002,6 +5899,17 @@ function renderizarEpisodios(numeroTemporada) {
     numeroEl.textContent = "EP " + numero;
     thumb.appendChild(numeroEl);
 
+    const chaveEpisodio = chaveProgressoEpisodio(episodio, numeroTemporada, numero);
+    const progressoEpisodio = obterProgresso(chaveEpisodio);
+    if (progressoEpisodio && Number(progressoEpisodio.duracao) > 0) {
+      const barra = document.createElement("span");
+      barra.className = "episode-progress";
+      const preenchimento = document.createElement("span");
+      preenchimento.style.width = Math.max(2, Math.min(100, (Number(progressoEpisodio.segundos) / Number(progressoEpisodio.duracao)) * 100)) + "%";
+      barra.appendChild(preenchimento);
+      thumb.appendChild(barra);
+    }
+
     const infoEl = document.createElement("div");
     infoEl.className = "episode-info";
     const rotulo = document.createElement("span");
@@ -5052,9 +5960,32 @@ function reproduzirEpisodio(numeroTemporada, indice, rolar) {
   definirStream(stream, "serie");
   currentEpisode = episodio;
 
+  const serieIdParaChave = currentItem && currentItem._m3u ? null : currentSerieId;
+  const serieChave = chaveSerieProgresso(serieIdParaChave, currentSerieName);
+  const chaveEpisodio = chaveProgressoEpisodio(episodio, numeroTemporada, numero);
+  const rotuloEpisodio = "T" + numeroTemporada + " • E" + numero + " — " + titulo;
+  configurarPlaybackAtual({
+    chave: chaveEpisodio,
+    tipo: "episodio",
+    titulo: (currentSerieName ? currentSerieName + " • " : "") + rotuloEpisodio,
+    serieChave: serieChave,
+    serieNome: currentSerieName,
+    temporada: numeroTemporada,
+    episodio: numero,
+    idEpisodio: idEpisodio
+  });
+  registrarUltimoEpisodioSerie(serieChave, {
+    temporada: numeroTemporada,
+    episodio: numero,
+    id: idEpisodio,
+    titulo: titulo,
+    chave: chaveEpisodio,
+    serieNome: currentSerieName
+  });
+
   const atual = $("#episodioAtual");
   if (atual) {
-    atual.textContent = "T" + numeroTemporada + " • E" + numero + " — " + titulo;
+    atual.textContent = rotuloEpisodio;
     atual.classList.remove("hidden");
   }
   $$(".episode-card").forEach(function (card) {
@@ -5135,6 +6066,33 @@ async function carregarSerieDetalhes(item) {
       return obterEpisodiosTemporada(temporada.season_number).length > 0;
     }) || currentSeasons[0];
 
+    let temporadaInicial = primeiraTemporada;
+    let indiceInicial = 0;
+    const ultimoEpisodio = obterUltimoEpisodioSerie(item);
+    if (ultimoEpisodio) {
+      const numeroTemporada = Number(ultimoEpisodio.temporada);
+      const temporadaSalva = currentSeasons.find(function (temporada) {
+        return Number(temporada.season_number) === numeroTemporada &&
+          obterEpisodiosTemporada(numeroTemporada).length > 0;
+      });
+      if (temporadaSalva) {
+        const episodiosSalvos = obterEpisodiosTemporada(numeroTemporada);
+        let indiceSalvo = episodiosSalvos.findIndex(function (episodio) {
+          const id = episodio.id != null ? episodio.id : episodio.episode_id;
+          return ultimoEpisodio.id != null && String(id) === String(ultimoEpisodio.id);
+        });
+        if (indiceSalvo < 0) {
+          indiceSalvo = episodiosSalvos.findIndex(function (episodio) {
+            return Number(episodio.episode_num) === Number(ultimoEpisodio.episodio);
+          });
+        }
+        if (indiceSalvo >= 0) {
+          temporadaInicial = temporadaSalva;
+          indiceInicial = indiceSalvo;
+        }
+      }
+    }
+
     const opcoes = currentSeasons.map(function (temporada) {
       return '<option value="' + esc(temporada.season_number) + '">' + esc(temporada.name) + "</option>";
     }).join("");
@@ -5150,10 +6108,10 @@ async function carregarSerieDetalhes(item) {
       '<div id="episodesGrid" class="episodes-grid"></div>';
 
     const seletor = $("#seletorTemporada");
-    if (seletor && primeiraTemporada) seletor.value = String(primeiraTemporada.season_number);
-    if (primeiraTemporada) {
-      renderizarEpisodios(primeiraTemporada.season_number);
-      reproduzirEpisodio(primeiraTemporada.season_number, 0, false);
+    if (seletor && temporadaInicial) seletor.value = String(temporadaInicial.season_number);
+    if (temporadaInicial) {
+      renderizarEpisodios(temporadaInicial.season_number);
+      reproduzirEpisodio(temporadaInicial.season_number, indiceInicial, false);
     }
   } catch (erro) {
     if (!area || !document.body.contains(area) || String(currentSerieId) !== String(serieId)) return;
@@ -5179,11 +6137,16 @@ function logout() {
   cancelarCliquePendente();
   clearTimeout(searchDebounce);
   searchDebounce = null;
+  salvarProgressoAtual();
   pararVideoAtual();
   buscaAtiva = false;
 
   try { localStorage.clear(); } catch (erro) {}
   favoritosCache = null;
+  progressoCache = null;
+  ultimosEpisodiosCache = null;
+  currentPlayback = null;
+  pendingResume = null;
 
   todosFilmes = [];
   todosSeries = [];
@@ -5264,10 +6227,33 @@ function inicializar() {
   preencherLoginSalvo();
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") fecharMenu();
+    if (!currentStreamUrl || !$("#videoPlayer")) return;
+    const alvo = event.target;
+    if (alvo && /^(INPUT|TEXTAREA|SELECT)$/i.test(alvo.tagName || "")) return;
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      playerVolumeUp();
+      const video = $("#videoPlayer");
+      exibirToast("🔊 Volume " + Math.round((video ? video.volume : obterVolumeSalvo()) * 100) + "%");
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      playerVolumeDown();
+      const video = $("#videoPlayer");
+      exibirToast("🔉 Volume " + Math.round((video ? video.volume : obterVolumeSalvo()) * 100) + "%");
+    } else if (event.key === "m" || event.key === "M") {
+      event.preventDefault();
+      playerMute();
+      const video = $("#videoPlayer");
+      exibirToast(video && (video.muted || video.volume === 0) ? "🔇 Mudo" : "🔊 Som ativado");
+    }
   });
   window.addEventListener("storage", function (event) {
     if (event.key === "favoritos" || event.key === null) favoritosCache = null;
+    if (event.key === CHAVE_PROGRESSO || event.key === null) progressoCache = null;
+    if (event.key === CHAVE_ULTIMOS_EPISODIOS || event.key === null) ultimosEpisodiosCache = null;
   });
+  window.addEventListener("beforeunload", salvarProgressoAtual);
+  window.addEventListener("pagehide", salvarProgressoAtual);
 }
 
 if (document.readyState === "loading") {
