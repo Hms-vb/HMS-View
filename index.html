@@ -16,6 +16,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+<!-- HLS.js Streaming Engine for M3U8 Live Channels -->
+<script src="/hls.min.js"></script>
+<script>
+  if (typeof Hls === "undefined") {
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
+    document.head.appendChild(s);
+  }
+</script>
+
 <style>
 :root {
   --bg: #141414;
@@ -210,6 +220,39 @@ img {
   font-weight: 800;
   letter-spacing: 4px;
   text-transform: uppercase;
+}
+
+.login-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 22px;
+  gap: 4px;
+}
+
+.login-tab {
+  flex: 1;
+  padding: 10px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.login-tab.active {
+  background: #333333;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.login-tab:hover:not(.active) {
+  color: #ffffff;
 }
 
 .form-group {
@@ -1942,18 +1985,24 @@ img {
       <h1 id="loginTitle" class="logo login-logo"><span class="branco">HMS</span><span class="vermelho">-TV</span></h1>
       <p class="login-subtitle">IPTV E VIDA</p>
     </div>
+    <div class="login-tabs" role="tablist">
+      <button type="button" class="login-tab active" id="tabXtream" onclick="alternarModoLogin('xtream')" role="tab" aria-selected="true">Xtream Codes</button>
+      <button type="button" class="login-tab" id="tabM3u" onclick="alternarModoLogin('m3u')" role="tab" aria-selected="false">Lista M3U / URL</button>
+    </div>
     <form id="loginForm" novalidate>
       <div class="form-group">
-        <label for="urlServidor">URL do Servidor IPTV</label>
+        <label id="lblUrl" for="urlServidor">URL do Servidor IPTV</label>
         <input id="urlServidor" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="http://servidor.com:8080" aria-label="URL do servidor">
       </div>
-      <div class="form-group">
-        <label for="usuario">Usuário</label>
-        <input id="usuario" type="text" autocomplete="username" spellcheck="false" placeholder="Seu usuário" aria-label="Usuário">
-      </div>
-      <div class="form-group">
-        <label for="senha">Senha</label>
-        <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" aria-label="Senha">
+      <div id="camposCredenciais">
+        <div class="form-group">
+          <label for="usuario">Usuário</label>
+          <input id="usuario" type="text" autocomplete="username" spellcheck="false" placeholder="Seu usuário" aria-label="Usuário">
+        </div>
+        <div class="form-group">
+          <label for="senha">Senha</label>
+          <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" aria-label="Senha">
+        </div>
       </div>
       <label class="remember-row" for="lembrarLogin">
         <input id="lembrarLogin" type="checkbox">
@@ -1962,8 +2011,11 @@ img {
       </label>
       <button id="btnEntrar" class="login-submit" type="submit">Entrar</button>
     </form>
+    <div id="cloudProxyNotice" style="margin-top: 14px; padding: 10px 14px; background: rgba(229, 9, 20, 0.08); border: 1px solid rgba(229, 9, 20, 0.25); border-radius: 8px; font-size: 0.72rem; color: #d0d0d0; line-height: 1.45; text-align: left;">
+      <span style="color: #46d369; font-weight: 700;">● Cloudflare / HTTPS Seguro:</span> Conexão protegida com proxy anti-CORS e reprodução HLS.js ativada para canais ao vivo e filmes.
+    </div>
     <div class="login-footnote">
-      Conecte-se com sua lista Xtream Codes para assistir a <strong>filmes</strong>, <strong>séries</strong> e <strong>canais ao vivo</strong> em qualquer dispositivo.
+      Conecte-se com sua lista Xtream Codes ou link M3U para assistir a <strong>filmes</strong>, <strong>séries</strong> e <strong>canais ao vivo</strong> em qualquer dispositivo.
     </div>
   </main>
 </div>
@@ -2077,6 +2129,8 @@ let activePass = "";
 let streamBaseFilmes = "";
 let streamBaseSeries = "";
 let streamBaseCanais = "";
+let modoLoginAtual = "xtream";
+let hlsInstance = null;
 
 let favoritosCache = null;
 let currentItem = null;
@@ -2101,9 +2155,129 @@ let buscaAtiva = false;
 let toastTimer = null;
 let loginEmAndamento = false;
 
-/* ---------- Utilitarios ---------- */
+/* ---------- Utilitarios de Seguranca e URLs ---------- */
 const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
 const $$ = (seletor, raiz = document) => Array.from(raiz.querySelectorAll(seletor));
+
+function sanitizarUrl(url) {
+  if (!url) return "";
+  return String(url)
+    .replace(/([?&](?:password|pass)=)[^&]*/gi, "$1******")
+    .replace(/(\/(?:movie|series|live)\/[^\/]+\/)[^\/]+/gi, "$1******");
+}
+
+function resolverUrlProxy(url) {
+  if (!url) return "";
+  // Se ja for uma URL do proxy ou relativa local, mantenha
+  if (url.startsWith("/api/proxy") || url.startsWith("./") || (url.startsWith("/") && !url.startsWith("//"))) {
+    return url;
+  }
+  // No Cloudflare Pages, Netlify ou ambiente HTTPS, ou quando a URL for HTTP:
+  const isHttps = window.location.protocol === "https:";
+  const isTargetHttp = /^http:\/\//i.test(url);
+  const isCloudHost = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+
+  if (isHttps || isTargetHttp || isCloudHost) {
+    return "/api/proxy?url=" + encodeURIComponent(url);
+  }
+  return url;
+}
+
+function alternarModoLogin(modo) {
+  modoLoginAtual = modo;
+  const tabX = $("#tabXtream");
+  const tabM = $("#tabM3u");
+  const camposCred = $("#camposCredenciais");
+  const lblUrl = $("#lblUrl");
+  const campoUrl = $("#urlServidor");
+
+  if (tabX) {
+    tabX.classList.toggle("active", modo === "xtream");
+    tabX.setAttribute("aria-selected", modo === "xtream" ? "true" : "false");
+  }
+  if (tabM) {
+    tabM.classList.toggle("active", modo === "m3u");
+    tabM.setAttribute("aria-selected", modo === "m3u" ? "true" : "false");
+  }
+
+  if (modo === "m3u") {
+    if (camposCred) camposCred.classList.add("hidden");
+    if (lblUrl) lblUrl.textContent = "URL da Lista M3U / M3U8";
+    if (campoUrl) campoUrl.placeholder = "http://servidor.com:8080/get.php?username=...&type=m3u_plus";
+  } else {
+    if (camposCred) camposCred.classList.remove("hidden");
+    if (lblUrl) lblUrl.textContent = "URL do Servidor IPTV";
+    if (campoUrl) campoUrl.placeholder = "http://servidor.com:8080";
+  }
+}
+
+function parsearM3u(texto) {
+  const linhas = String(texto || "").split(/\r?\n/);
+  const canais = [];
+  const filmes = [];
+  const series = [];
+  let metaAtual = null;
+
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
+    if (!linha) continue;
+
+    if (linha.startsWith("#EXTINF:")) {
+      const matchTvgId = linha.match(/tvg-id="([^"]*)"/i);
+      const matchTvgName = linha.match(/tvg-name="([^"]*)"/i);
+      const matchLogo = linha.match(/tvg-logo="([^"]*)"/i);
+      const matchGroup = linha.match(/group-title="([^"]*)"/i);
+      const virgulaIndex = linha.lastIndexOf(",");
+      const nome = virgulaIndex !== -1 ? linha.substring(virgulaIndex + 1).trim() : (matchTvgName ? matchTvgName[1] : "Sem título");
+      const categoria = matchGroup && matchGroup[1].trim() ? matchGroup[1].trim() : "Geral";
+
+      metaAtual = {
+        name: nome,
+        stream_id: "m3u_" + (i + 1),
+        stream_icon: matchLogo ? matchLogo[1] : "",
+        category_name: categoria,
+        category_id: normalizarTexto(categoria) || "geral",
+        tvg_id: matchTvgId ? matchTvgId[1] : "",
+      };
+      continue;
+    }
+
+    if (!linha.startsWith("#") && metaAtual) {
+      const streamUrl = linha;
+      const lower = streamUrl.toLowerCase();
+      const normGroup = normalizarTexto(metaAtual.category_name || "");
+      const item = Object.assign({}, metaAtual, {
+        direct_source: streamUrl,
+        stream_url: streamUrl
+      });
+
+      if (
+        lower.includes("/series/") ||
+        normGroup.includes("serie") ||
+        normGroup.includes("temporada")
+      ) {
+        item._tipo = "serie";
+        series.push(item);
+      } else if (
+        lower.includes("/movie/") ||
+        lower.endsWith(".mp4") ||
+        lower.endsWith(".mkv") ||
+        normGroup.includes("filme") ||
+        normGroup.includes("vod") ||
+        normGroup.includes("movie")
+      ) {
+        item._tipo = "filme";
+        filmes.push(item);
+      } else {
+        item._tipo = "canal";
+        canais.push(item);
+      }
+      metaAtual = null;
+    }
+  }
+
+  return { canais, filmes, series };
+}
 
 function storageGet(chave, padrao = null) {
   try {
@@ -2176,13 +2350,47 @@ function apiUrl(acao, parametros) {
 }
 
 async function fetchJson(url) {
-  const resposta = await fetch(url, { cache: "no-store" });
-  if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+  const urlFinal = resolverUrlProxy(url);
+  let resposta;
+  try {
+    resposta = await fetch(urlFinal, {
+      cache: "no-store",
+      headers: {
+        "Accept": "application/json, text/plain, */*",
+        "X-HMS-Client": "1"
+      }
+    });
+  } catch (redeErr) {
+    console.error("Falha de rede ao acessar:", sanitizarUrl(url), redeErr);
+    // Se falhar via proxy e for localhost, tenta requisicao direta
+    if (urlFinal !== url) {
+      try {
+        const direto = await fetch(url, { cache: "no-store" });
+        if (direto.ok) return await direto.json();
+      } catch (e) {}
+    }
+    throw new Error("NETWORK_ERROR");
+  }
+
+  if (!resposta.ok) {
+    if (resposta.status === 401 || resposta.status === 403) {
+      try {
+        const errJson = await resposta.json();
+        if (errJson && errJson.details) throw new Error("SECURITY_" + errJson.details);
+      } catch (e) {}
+      throw new Error("AUTH");
+    }
+    if (resposta.status === 404) throw new Error("NOT_FOUND");
+    if (resposta.status >= 500) throw new Error("SERVER_ERROR_" + resposta.status);
+    throw new Error("HTTP_" + resposta.status);
+  }
+
   const texto = await resposta.text();
   try {
     return JSON.parse(texto);
-  } catch (erro) {
-    throw new Error("Resposta invalida da API");
+  } catch (err) {
+    console.warn("Resposta não é JSON:", sanitizarUrl(url), texto.slice(0, 150));
+    throw new Error("INVALID_JSON");
   }
 }
 
@@ -2329,6 +2537,13 @@ function cancelarCliquePendente() {
 }
 
 function pararVideoAtual() {
+  if (hlsInstance) {
+    try {
+      hlsInstance.detachMedia();
+      hlsInstance.destroy();
+    } catch (e) {}
+    hlsInstance = null;
+  }
   const video = $("#videoPlayer");
   if (video) {
     try { video.pause(); } catch (erro) {}
@@ -2465,8 +2680,15 @@ async function entrar(event) {
   const senha = campoSenha ? campoSenha.value : "";
   const lembrar = Boolean(campoLembrar && campoLembrar.checked);
 
-  if (!url || !usuario || !senha.trim()) {
-    alert("Preencha todos os campos para entrar.");
+  const ehM3u = modoLoginAtual === "m3u" || /\.m3u8?(\?|$)/i.test(url) || url.includes("get.php");
+
+  if (!url) {
+    alert("Informe a URL para continuar.");
+    return;
+  }
+
+  if (!ehM3u && (!usuario || !senha.trim())) {
+    alert("Preencha o usuário e a senha para entrar no Xtream Codes.");
     return;
   }
 
@@ -2475,47 +2697,83 @@ async function entrar(event) {
     storageSet("iptv_user", usuario);
     storageSet("iptv_pass", senha);
     storageSet("iptv_remember", "true");
+    storageSet("iptv_mode", ehM3u ? "m3u" : "xtream");
   } else {
     storageRemove("iptv_url");
     storageRemove("iptv_user");
     storageRemove("iptv_pass");
     storageRemove("iptv_remember");
+    storageRemove("iptv_mode");
   }
 
   loginEmAndamento = true;
   if (botao) {
     botao.disabled = true;
-    botao.textContent = "Entrando...";
+    botao.textContent = "Conectando...";
   }
 
   try {
-    const autenticacao = await fetchJson(construirApiUrl(url, usuario, senha));
-    const info = autenticacao && autenticacao.user_info;
-    const autenticado = info && (Number(info.auth) === 1 || String(info.status).toLowerCase() === "active");
-    if (!autenticado) throw new Error("AUTH");
+    if (ehM3u) {
+      // Modo M3U / M3U8 direto
+      console.log("Iniciando carregamento de playlist M3U:", sanitizarUrl(url));
+      const m3uUrl = resolverUrlProxy(url);
+      const resp = await fetch(m3uUrl, {
+        headers: { "X-HMS-Client": "1" }
+      });
+      if (!resp.ok) {
+        if (resp.status === 401 || resp.status === 403) throw new Error("AUTH");
+        if (resp.status === 404) throw new Error("NOT_FOUND");
+        if (resp.status >= 500) throw new Error("SERVER_ERROR_" + resp.status);
+        throw new Error("HTTP_" + resp.status);
+      }
+      const textoM3u = await resp.text();
+      const resultado = parsearM3u(textoM3u);
 
-    activeServerUrl = url;
-    activeUser = usuario;
-    activePass = senha;
-    streamBaseFilmes = url + "/movie";
-    streamBaseSeries = url + "/series";
-    streamBaseCanais = url + "/live";
+      if (!resultado.canais.length && !resultado.filmes.length && !resultado.series.length) {
+        throw new Error("M3U_VAZIO");
+      }
 
-    const respostas = await Promise.all([
-      fetchJson(apiUrl("get_vod_streams")),
-      fetchJson(apiUrl("get_series")),
-      fetchJson(apiUrl("get_live_streams")),
-      fetchJson(apiUrl("get_vod_categories")),
-      fetchJson(apiUrl("get_series_categories")),
-      fetchJson(apiUrl("get_live_categories"))
-    ]);
+      todosFilmes = resultado.filmes;
+      todosSeries = resultado.series;
+      todosCanais = resultado.canais;
+      categoriasFilmes = prepararCategorias(todosFilmes, []);
+      categoriasSeries = prepararCategorias(todosSeries, []);
+      categoriasCanais = prepararCategorias(todosCanais, []);
+      activeServerUrl = url;
+      activeUser = usuario;
+      activePass = senha;
+    } else {
+      // Modo Xtream Codes padrão
+      console.log("Autenticando via Xtream Codes:", sanitizarUrl(url));
+      const autenticacao = await fetchJson(construirApiUrl(url, usuario, senha));
+      const info = autenticacao && autenticacao.user_info;
+      const autenticado = info && (Number(info.auth) === 1 || String(info.status).toLowerCase() === "active");
+      if (!autenticado) throw new Error("AUTH");
 
-    todosFilmes = normalizarLista(respostas[0]);
-    todosSeries = normalizarLista(respostas[1]);
-    todosCanais = normalizarLista(respostas[2]);
-    categoriasFilmes = prepararCategorias(todosFilmes, respostas[3]);
-    categoriasSeries = prepararCategorias(todosSeries, respostas[4]);
-    categoriasCanais = prepararCategorias(todosCanais, respostas[5]);
+      activeServerUrl = url;
+      activeUser = usuario;
+      activePass = senha;
+      streamBaseFilmes = url + "/movie";
+      streamBaseSeries = url + "/series";
+      streamBaseCanais = url + "/live";
+
+      const respostas = await Promise.all([
+        fetchJson(apiUrl("get_vod_streams")),
+        fetchJson(apiUrl("get_series")),
+        fetchJson(apiUrl("get_live_streams")),
+        fetchJson(apiUrl("get_vod_categories")),
+        fetchJson(apiUrl("get_series_categories")),
+        fetchJson(apiUrl("get_live_categories"))
+      ]);
+
+      todosFilmes = normalizarLista(respostas[0]);
+      todosSeries = normalizarLista(respostas[1]);
+      todosCanais = normalizarLista(respostas[2]);
+      categoriasFilmes = prepararCategorias(todosFilmes, respostas[3]);
+      categoriasSeries = prepararCategorias(todosSeries, respostas[4]);
+      categoriasCanais = prepararCategorias(todosCanais, respostas[5]);
+    }
+
     currentItem = null;
     currentTipo = "";
     currentStreamUrl = "";
@@ -2528,6 +2786,7 @@ async function entrar(event) {
     if (busca) busca.value = "";
     renderTelaPrincipal();
   } catch (erro) {
+    console.error("Erro durante login/carregamento:", erro);
     activeServerUrl = "";
     activeUser = "";
     activePass = "";
@@ -2543,13 +2802,31 @@ async function entrar(event) {
     limparIntervaloSlideshow();
     pararVideoAtual();
     fecharMenu();
+
     const telaLogin = $("#loginScreen");
     const app = $("#appScreen");
     if (telaLogin) telaLogin.classList.remove("hidden");
     if (app) app.classList.add("hidden");
-    const mensagem = erro && erro.message === "AUTH"
-      ? "Usuário ou senha inválidos, ou conta inativa."
-      : "Não foi possível conectar ao servidor IPTV. Verifique a URL, o usuário e a senha.";
+
+    let mensagem = "Não foi possível conectar ao servidor IPTV.";
+    const errCode = erro ? erro.message : "";
+
+    if (errCode === "AUTH") {
+      mensagem = "Credenciais Inválidas (401/403):\nO usuário ou senha estão incorretos, ou a sua linha IPTV está inativa/expirada.";
+    } else if (errCode.startsWith("SECURITY_")) {
+      mensagem = "Bloqueio de Segurança:\n" + errCode.replace("SECURITY_", "");
+    } else if (errCode === "NOT_FOUND") {
+      mensagem = "Servidor não encontrado (HTTP 404):\nO endereço informado está incorreto ou a API Xtream Codes não responde nesta porta.";
+    } else if (errCode.startsWith("SERVER_ERROR_")) {
+      mensagem = "Instabilidade no Provedor (" + errCode.replace("SERVER_ERROR_", "HTTP ") + "):\nO servidor do seu provedor IPTV apresentou falha interna no momento.";
+    } else if (errCode === "INVALID_JSON") {
+      mensagem = "Resposta Inesperada:\nO servidor respondeu, mas não retornou uma lista IPTV válida. Verifique se o endereço é a raiz do servidor (ex: http://servidor.com:8080).";
+    } else if (errCode === "M3U_VAZIO") {
+      mensagem = "Lista M3U Vazia:\nA playlist foi baixada com sucesso, mas nenhum canal ou filme válido foi encontrado no arquivo.";
+    } else if (errCode === "NETWORK_ERROR") {
+      mensagem = "Falha de Conexão de Rede:\nNão foi possível alcançar o servidor IPTV. Verifique se a URL está correta e com a porta aberta.";
+    }
+
     alert(mensagem);
   } finally {
     loginEmAndamento = false;
@@ -2562,22 +2839,30 @@ async function entrar(event) {
 
 /* ---------- URLs de stream ---------- */
 function urlDoFilme(item) {
-  return streamBaseFilmes + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "filme")) + ".mp4";
+  if (item && item.direct_source) return resolverUrlProxy(item.direct_source);
+  const bruta = streamBaseFilmes + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "filme")) + ".mp4";
+  return resolverUrlProxy(bruta);
 }
 
 function urlDoCanal(item) {
-  return streamBaseCanais + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "canal")) + ".m3u8";
+  if (item && item.direct_source) return resolverUrlProxy(item.direct_source);
+  const bruta = streamBaseCanais + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "canal")) + ".m3u8";
+  return resolverUrlProxy(bruta);
 }
 
 function urlDoEpisodio(episodio) {
+  if (episodio && episodio.direct_source) return resolverUrlProxy(episodio.direct_source);
   const id = episodio && (episodio.id != null ? episodio.id : episodio.episode_id);
-  return streamBaseSeries + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(String(id)) + ".mp4";
+  const bruta = streamBaseSeries + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(String(id)) + ".mp4";
+  return resolverUrlProxy(bruta);
 }
 
 function gerarUrlStream(item, tipo) {
   if (!item) return "";
+  if (item.direct_source) return resolverUrlProxy(item.direct_source);
   if (tipo === "filme") return urlDoFilme(item);
   if (tipo === "canal") return urlDoCanal(item);
+  if (tipo === "serie") return urlDoEpisodio(item);
   return "";
 }
 
@@ -3366,16 +3651,90 @@ function metaDoConteudo(item, tipo) {
   return partes.join(" • ");
 }
 
+function tratarErroHls(event, data, hls) {
+  if (!data) return;
+  console.warn("HLS Error:", data.type, data.details, data.fatal ? "[FATAL]" : "");
+
+  if (data.fatal) {
+    switch (data.type) {
+      case (window.Hls && Hls.ErrorTypes ? Hls.ErrorTypes.NETWORK_ERROR : "networkError"):
+        console.warn("HLS: Erro de rede fatal. Tentando recuperar carga...");
+        if (data.details === "manifestLoadError" || data.details === "manifestParsingError") {
+          mostrarFeedbackPlayer(
+            "Canal Temporariamente Indisponível",
+            "O servidor IPTV não está transmitindo a playlist deste canal no momento (código: " + (data.response && data.response.code ? data.response.code : "Erro de Rede") + ").",
+            true,
+            "📡"
+          );
+          try { hls.destroy(); } catch (e) {}
+          hlsInstance = null;
+        } else {
+          try { hls.startLoad(); } catch (e) {}
+        }
+        break;
+      case (window.Hls && Hls.ErrorTypes ? Hls.ErrorTypes.MEDIA_ERROR : "mediaError"):
+        console.warn("HLS: Erro de decodificação de mídia. Tentando recuperar...");
+        try { hls.recoverMediaError(); } catch (e) {}
+        break;
+      default:
+        console.error("HLS: Erro fatal irrecuperável:", data.details);
+        mostrarFeedbackPlayer(
+          "Falha na Transmissão",
+          "O fluxo de vídeo foi interrompido pelo provedor ou utiliza um formato não suportado pelo navegador. Experimente abrir no VLC ou MX Player.",
+          true,
+          "⚠️"
+        );
+        try { hls.destroy(); } catch (e) {}
+        hlsInstance = null;
+        break;
+    }
+  }
+}
+
 function configurarEventosVideo() {
   const video = $("#videoPlayer");
   if (!video) return;
+
   video.addEventListener("error", function () {
     if (video !== $("#videoPlayer")) return;
-    if (currentStreamUrl) mostrarErroVideo();
+    if (!currentStreamUrl) return;
+
+    const err = video.error;
+    let titulo = "Não foi possível reproduzir";
+    let texto = "Ocorreu uma falha ao carregar este conteúdo.";
+    let icone = "⚠️";
+
+    if (err) {
+      switch (err.code) {
+        case 1: // MEDIA_ERR_ABORTED
+          return;
+        case 2: // MEDIA_ERR_NETWORK
+          titulo = "Erro de Conexão";
+          texto = "A conexão com o servidor IPTV falhou ou foi interrompida durante o streaming.";
+          icone = "🌐";
+          break;
+        case 3: // MEDIA_ERR_DECODE
+          titulo = "Erro de Decodificação";
+          texto = "O codec deste vídeo não pôde ser decodificado pelo navegador. Tente um player externo.";
+          icone = "🎞️";
+          break;
+        case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+          titulo = "Formato Não Suportado";
+          texto = currentTipo === "canal"
+            ? "O formato desta transmissão ao vivo não é suportado nativamente pelo navegador."
+            : "O arquivo de vídeo não foi encontrado no servidor IPTV ou o formato não é aceito.";
+          icone = "📵";
+          break;
+      }
+    }
+
+    mostrarFeedbackPlayer(titulo, texto, true, icone);
   });
+
   video.addEventListener("loadeddata", function () {
     if (video === $("#videoPlayer")) ocultarFeedbackPlayer();
   });
+
   video.addEventListener("playing", function () {
     if (video === $("#videoPlayer")) ocultarFeedbackPlayer();
   });
@@ -3400,18 +3759,6 @@ function ocultarFeedbackPlayer() {
   if (feedback) feedback.classList.add("hidden");
 }
 
-function mostrarErroVideo() {
-  const alternativas = currentStreamUrl.indexOf(".m3u8") !== -1 || currentTipo === "canal";
-  mostrarFeedbackPlayer(
-    "Não foi possível reproduzir",
-    alternativas
-      ? "Este navegador pode não suportar transmissões ao vivo. Abra em um player compatível."
-      : "O formato ou a conexão não é compatível com este navegador. Tente um player externo.",
-    true,
-    "⚠️"
-  );
-}
-
 function definirStream(url, tipo) {
   const video = $("#videoPlayer");
   if (!video) return;
@@ -3419,13 +3766,89 @@ function definirStream(url, tipo) {
     mostrarFeedbackPlayer("Conteúdo indisponível", "Nenhum stream foi encontrado para este título.", false, "📵");
     return;
   }
+
+  // Interrompe e destroi qualquer instancia anterior do Hls.js ou video em execucao
+  pararVideoAtual();
+
   currentStreamUrl = url;
   ocultarFeedbackPlayer();
+
+  const ehHls = tipo === "canal" || /\.m3u8(\?|$)/i.test(url);
+
+  if (ehHls) {
+    // 1. Tenta Hls.js se suportado pelo navegador (Chrome, Edge, Firefox, Brave)
+    if (window.Hls && Hls.isSupported()) {
+      try {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 60,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          maxBufferHole: 0.5,
+          highBufferWatchdogPeriod: 2,
+          manifestLoadingTimeOut: 15000,
+          manifestLoadingMaxRetry: 3,
+          levelLoadingTimeOut: 15000,
+          levelLoadingMaxRetry: 3,
+          fragLoadingTimeOut: 20000,
+          fragLoadingMaxRetry: 4
+        });
+
+        hlsInstance = hls;
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+          hls.loadSource(url);
+        });
+
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          ocultarFeedbackPlayer();
+          const p = video.play();
+          if (p && typeof p.catch === "function") {
+            p.catch(function (err) {
+              console.warn("Autoplay bloqueado pelo navegador:", err);
+            });
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, function (event, data) {
+          tratarErroHls(event, data, hls);
+        });
+
+        return;
+      } catch (err) {
+        console.error("Falha ao inicializar Hls.js:", err);
+      }
+    }
+
+    // 2. Suporte nativo a HLS (Safari no macOS / iOS)
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = url;
+      try { video.load(); } catch (e) {}
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(function () {});
+      return;
+    }
+
+    // 3. Sem suporte HLS
+    mostrarFeedbackPlayer(
+      "Transmissão HLS Não Suportada",
+      "Seu navegador não possui suporte a streams HLS (M3U8). Abra no VLC ou MX Player.",
+      true,
+      "📡"
+    );
+    return;
+  }
+
+  // MP4 streaming (Filmes e Series)
   video.src = url;
-  try { video.load(); } catch (erro) {}
+  try { video.load(); } catch (e) {}
   const tentativa = video.play();
   if (tentativa && typeof tentativa.catch === "function") {
-    tentativa.catch(function () {});
+    tentativa.catch(function (err) {
+      console.warn("Reprodução automática MP4:", err);
+    });
   }
 }
 
@@ -3599,12 +4022,24 @@ function toggleFullScreen() {
   if (video && video.webkitEnterFullscreen) video.webkitEnterFullscreen();
 }
 
+function desempacotarUrlReal(url) {
+  if (!url) return "";
+  try {
+    if (url.includes("/api/proxy?url=")) {
+      const u = new URL(url, window.location.origin);
+      const real = u.searchParams.get("url");
+      if (real) return real;
+    }
+  } catch (e) {}
+  return url;
+}
+
 function abrirPlayerExterno(pacote, nomePlayer) {
   if (!currentStreamUrl) {
     exibirToast("Nenhum vídeo disponível para abrir.");
     return;
   }
-  const url = currentStreamUrl;
+  const url = desempacotarUrlReal(currentStreamUrl);
   const android = /Android/i.test(navigator.userAgent || "");
   if (android) {
     const semProtocolo = url.replace(/^https?:\/\//, "");
@@ -3965,6 +4400,8 @@ function logout() {
 }
 
 function inicializar() {
+  const modoSalvo = storageGet("iptv_mode", "xtream");
+  if (modoSalvo === "m3u") alternarModoLogin("m3u");
   const form = $("#loginForm");
   if (form) form.addEventListener("submit", entrar);
   preencherLoginSalvo();
