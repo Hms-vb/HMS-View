@@ -2500,6 +2500,7 @@ let modoProxy = "auto";
 let proxyPersonalizado = "";
 let arquivoM3uSelecionado = null;
 let streamTentouDireto = false;
+let streamTentouProxyNormal = false;
 let currentStreamOriginal = "";
 let streamGeneration = 0;
 let hlsLoadPromise = null;
@@ -2582,6 +2583,12 @@ function montarUrlProxy(proxyBase, urlAlvo) {
   return base + "?url=" + encodeURIComponent(alvo);
 }
 
+function montarUrlProxyRedirecionamento(proxyBase, urlAlvo) {
+  const base = montarUrlProxy(proxyBase, urlAlvo);
+  if (!base) return "";
+  return base + (base.includes("?") ? "&" : "?") + "redirect=1";
+}
+
 function deveUsarProxy() {
   if (modoProxy === "off") return false;
   if (modoProxy === "on") return true;
@@ -2601,6 +2608,26 @@ function resolverUrlProxy(url, forcarDireto) {
   const proxy = obterProxyBase();
   if (!proxy) return valor;
   return montarUrlProxy(proxy, valor);
+}
+
+/**
+ * Usa o modo "redirect" do proxy para filmes e episódios.
+ *
+ * O proxy devolve um 302 para o link assinado final (já em HTTPS) e o
+ * navegador baixa o vídeo direto do CDN do provedor. Assim o stream não passa
+ * pelos IPs do Cloudflare, que costumam ser bloqueados pelo anti-leech.
+ */
+function resolverUrlProxyRedirecionamento(url) {
+  if (!url) return "";
+  const valor = String(url).trim();
+  if (!valor) return "";
+  if (/^(data:|blob:)/i.test(valor)) return valor;
+  if (valor.startsWith("/api/proxy")) return valor;
+  if (valor.startsWith("./") || (valor.startsWith("/") && !valor.startsWith("//"))) return valor;
+  if (!deveUsarProxy()) return valor;
+  const proxy = obterProxyBase();
+  if (!proxy) return valor;
+  return montarUrlProxyRedirecionamento(proxy, valor);
 }
 
 function urlDiretaPermitida(url) {
@@ -4138,6 +4165,7 @@ async function entrar(event) {
     currentStreamUrl = "";
     currentStreamOriginal = "";
     streamTentouDireto = false;
+    streamTentouProxyNormal = false;
     currentEpisode = null;
 
     const telaLogin = $("#loginScreen");
@@ -5219,6 +5247,24 @@ function tentarStreamDireto() {
   return true;
 }
 
+function streamAtualEmRedirecionamento() {
+  return /(?:[?&])redirect=1(?:&|$)/i.test(String(currentStreamUrl || ""));
+}
+
+function tentarStreamProxyNormal() {
+  if (streamTentouProxyNormal) return false;
+  if (!streamAtualEmRedirecionamento()) return false;
+  const original = String(currentStreamOriginal || "").trim();
+  if (!original) return false;
+  if (!deveUsarProxy()) return false;
+  const proxyUrl = resolverUrlProxy(original);
+  if (!proxyUrl || proxyUrl === currentStreamUrl) return false;
+  streamTentouProxyNormal = true;
+  console.warn("Falha no redirecionamento. Tentando streaming pelo proxy...");
+  definirStream(original, currentTipo || "canal", true, "proxy");
+  return true;
+}
+
 function tratarErroHls(event, data, hls) {
   if (!data) return;
   console.warn("HLS Error:", data.type, data.details, data.fatal ? "[FATAL]" : "");
@@ -5303,7 +5349,10 @@ function configurarEventosVideo() {
     let texto = "Ocorreu uma falha ao carregar este conteúdo.";
     let icone = "⚠️";
 
-    if (err && (err.code === 2 || err.code === 4) && tentarStreamDireto()) return;
+    if (err && (err.code === 2 || err.code === 4)) {
+      if (tentarStreamProxyNormal()) return;
+      if (tentarStreamDireto()) return;
+    }
 
     if (err) {
       switch (err.code) {
@@ -5367,7 +5416,7 @@ function configurarEventosVideo() {
   });
 }
 
-async function definirStream(url, tipo, manterTentativa) {
+async function definirStream(url, tipo, manterTentativa, modoForcado) {
   const video = $("#videoPlayer");
   if (!video) return;
   if (!url) {
@@ -5386,16 +5435,26 @@ async function definirStream(url, tipo, manterTentativa) {
   pararVideoAtual(manterTentativa);
 
   currentStreamOriginal = original;
-  if (!manterTentativa) streamTentouDireto = false;
+  if (!manterTentativa) {
+    streamTentouDireto = false;
+    streamTentouProxyNormal = false;
+  }
 
-  const urlFinal = streamTentouDireto ? original : (resolverUrlProxy(original) || original);
-  currentStreamUrl = urlFinal;
-  ocultarFeedbackPlayer();
-
-  const extensao = (extensaoDoStream(original) || extensaoDoStream(urlFinal)).toLowerCase();
+  const extensao = (extensaoDoStream(original) || extensaoDoStream(url) || "").toLowerCase();
   const ehTs = /^(ts|mpegts|m2ts|mts)$/i.test(extensao);
   const ehMidiaNativa = /^(mp4|m4v|webm|ogv|ogg|mov|mkv|avi|wmv|flv)$/i.test(extensao);
   const ehHls = /\.m3u8(\?|#|$)/i.test(original) || (tipo === "canal" && !ehTs && !ehMidiaNativa);
+
+  // Filmes e episódios em MP4 usam o modo "redirect": o proxy apenas resolve
+  // o link assinado do CDN e o navegador baixa o vídeo direto, sem passar
+  // pelos IPs do Cloudflare (que o anti-leech do provedor costuma bloquear).
+  const progressivo = !ehHls && !ehTs && tipo !== "canal";
+  const usarRedirecionamento = progressivo && modoForcado !== "proxy";
+  const urlFinal = streamTentouDireto
+    ? original
+    : ((usarRedirecionamento ? resolverUrlProxyRedirecionamento(original) : resolverUrlProxy(original)) || original);
+  currentStreamUrl = urlFinal;
+  ocultarFeedbackPlayer();
 
   if (ehTs && tipo === "canal") {
     const carregouMpegts = await garantirMpegts();
@@ -5550,6 +5609,7 @@ function abrirTelaConteudo(url, item, tipo) {
   currentStreamUrl = "";
   currentStreamOriginal = "";
   streamTentouDireto = false;
+  streamTentouProxyNormal = false;
   currentSerieId = tipoFinal === "serie" ? (item.series_id != null ? item.series_id : item.id) : null;
   currentSerieName = tipoFinal === "serie" ? String(item.name || "Série") : "";
   currentEpisodesData = {};
@@ -5957,6 +6017,7 @@ function reproduzirEpisodio(numeroTemporada, indice, rolar) {
   const stream = urlDoEpisodio(episodio);
   currentStreamOriginal = stream;
   streamTentouDireto = false;
+  streamTentouProxyNormal = false;
   definirStream(stream, "serie");
   currentEpisode = episodio;
 
@@ -6165,6 +6226,7 @@ function logout() {
   currentStreamUrl = "";
   currentStreamOriginal = "";
   streamTentouDireto = false;
+  streamTentouProxyNormal = false;
   currentSerieId = null;
   currentSerieName = "";
   currentEpisodesData = {};
