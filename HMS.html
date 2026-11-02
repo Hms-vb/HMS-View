@@ -1,0 +1,3986 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#141414">
+<title>HMS-TV — IPTV e Vida</title>
+<meta name="description" content="Plataforma de streaming IPTV com filmes, séries e canais ao vivo estilo Netflix." />
+<meta property="og:title" content="HMS-TV — IPTV e Vida" />
+<meta property="og:description" content="Plataforma de streaming IPTV com filmes, séries e canais ao vivo estilo Netflix." />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<!-- Google Fonts: Plus Jakarta Sans + Bebas Neue -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #141414;
+  --bg-surface: #181818;
+  --bg-card: #1f1f1f;
+  --bg-card-hover: #262626;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.16);
+  --text: #ffffff;
+  --text-muted: #a3a3a3;
+  --text-sub: #737373;
+  --red: #e50914;
+  --red-hover: #f40612;
+  --red-dark: #b81d24;
+  --red-glow: rgba(229, 9, 20, 0.4);
+  --green-match: #46d369;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-logo: 'Bebas Neue', 'Plus Jakarta Sans', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  line-height: 1.4;
+}
+
+body.menu-open {
+  overflow: hidden;
+}
+
+button, input, select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+img {
+  display: block;
+}
+
+.hidden {
+  display: none !important;
+}
+
+::selection {
+  background: var(--red);
+  color: #fff;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #444 var(--bg);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--red);
+}
+
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* ========================================================
+   LOGO (Netflix style curved bold typography)
+   ======================================================== */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-logo);
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: 1px;
+  line-height: 1;
+  user-select: none;
+  white-space: nowrap;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.logo span {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.logo .branco {
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.logo .vermelho {
+  color: var(--red);
+  text-shadow: 0 0 16px var(--red-glow), 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* ========================================================
+   LOGIN SCREEN (Netflix authentic cinematic sign-in)
+   ======================================================== */
+.login-screen {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(229, 9, 20, 0.12) 0%, transparent 65%),
+    radial-gradient(circle at 80% 90%, rgba(229, 9, 20, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(20, 20, 20, 0.85) 0%, #141414 100%),
+    #0a0a0a;
+  overflow: hidden;
+}
+
+.login-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.login-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 440px;
+  padding: 48px 44px 40px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: rgba(0, 0, 0, 0.78);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-logo {
+  font-size: clamp(3rem, 10vw, 3.8rem);
+  letter-spacing: 1.5px;
+}
+
+.login-subtitle {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin: 0 0 8px 2px;
+  color: #cfcfcf;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.form-group input {
+  display: block;
+  width: 100%;
+  padding: 15px 16px;
+  color: #ffffff;
+  background: #333333;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.form-group input::placeholder {
+  color: #8c8c8c;
+  font-size: 0.88rem;
+}
+
+.form-group input:focus {
+  border-color: #ffffff;
+  background: #404040;
+  box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.35);
+}
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: 100%;
+  margin: 6px 0 26px;
+  color: #b3b3b3;
+  font-size: 0.82rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-row input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #555555;
+  border-radius: 4px;
+  background: #262626;
+  color: #ffffff;
+  font-size: 0.75rem;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.remember-row input:checked + .checkbox-custom {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.remember-row input:checked + .checkbox-custom::after {
+  content: "✓";
+  font-weight: 900;
+}
+
+.remember-row input:focus-visible + .checkbox-custom {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.login-submit {
+  width: 100%;
+  padding: 15px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--red);
+  color: #ffffff;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 6px 24px var(--red-glow);
+}
+
+.login-submit:hover {
+  background: var(--red-hover);
+  box-shadow: 0 8px 30px rgba(229, 9, 20, 0.5);
+  transform: translateY(-1px);
+}
+
+.login-submit:active {
+  transform: scale(0.985);
+}
+
+.login-submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  transform: none;
+}
+
+.login-footnote {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-sub);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.login-footnote strong {
+  color: #cfcfcf;
+}
+
+
+/* ========================================================
+   HEADER (Netflix glass top navigation)
+   ======================================================== */
+.app-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 500;
+  height: 68px;
+  background: linear-gradient(180deg, rgba(20, 20, 20, 0.96) 0%, rgba(20, 20, 20, 0.8) 70%, rgba(20, 20, 20, 0) 100%);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.3s ease;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 1700px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 100%;
+}
+
+.header-logo {
+  font-size: 1.85rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+/* Desktop navigation links (Netflix primary nav) */
+.desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: 12px;
+}
+
+.nav-link {
+  color: #e5e5e5;
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 6px 0;
+  transition: color 0.2s ease, opacity 0.2s;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.nav-link:hover {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.nav-link.active {
+  color: #ffffff;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 1.15rem;
+  line-height: 1;
+  color: #ffffff;
+  transition: background 0.2s, transform 0.15s, border-color 0.2s;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+.menu-trigger {
+  display: none;
+}
+
+.search-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 420px;
+  margin-left: auto;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 18px 10px 40px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  outline: none;
+  font-size: 0.84rem;
+  transition: all 0.25s ease;
+}
+
+.search-wrap::before {
+  content: "🔍";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.82rem;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.search-input::placeholder {
+  color: #888888;
+}
+
+.search-input:focus {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.25);
+}
+
+.header-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.header-user-btn:hover {
+  opacity: 0.85;
+}
+
+.user-avatar-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--red) 0%, #75040a 100%);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ========================================================
+   SIDE MENU (Netflix dark drawer)
+   ======================================================== */
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.75);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s, visibility 0.25s;
+}
+
+.menu-overlay.aberto {
+  opacity: 1;
+  visibility: visible;
+}
+
+.menu-lateral {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 910;
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-width: 86vw;
+  background: #111111;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translateX(-105%);
+  transition: transform 0.28s cubic-bezier(0.22, 0.8, 0.32, 1);
+  box-shadow: 20px 0 60px rgba(0, 0, 0, 0.8);
+}
+
+.menu-lateral.aberto {
+  transform: translateX(0);
+}
+
+.menu-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 20px 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menu-logo {
+  font-size: 2rem;
+}
+
+.menu-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 14px;
+  overflow-y: auto;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 13px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: #d1d1d1;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.15s;
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  transform: translateX(3px);
+}
+
+.menu-item .menu-icon {
+  width: 24px;
+  flex: 0 0 24px;
+  text-align: center;
+  font-size: 1.15rem;
+}
+
+.menu-item.sair {
+  color: #ff6b72;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.menu-item.sair:hover {
+  background: rgba(229, 9, 20, 0.14);
+  border-color: rgba(229, 9, 20, 0.3);
+  color: #ffffff;
+}
+
+/* ========================================================
+   MAIN & HOME VIEW (Netflix Billboard & Row Carousels)
+   ======================================================== */
+.app-main {
+  min-height: 100vh;
+  padding-top: 68px;
+}
+
+.home-view {
+  padding-bottom: 60px;
+}
+
+/* Netflix Hero Billboard */
+.slideshow {
+  position: relative;
+  height: 540px;
+  width: 100%;
+  overflow: hidden;
+  background: #0d0d0d;
+  isolation: isolate;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  visibility: hidden;
+  cursor: pointer;
+  transition: opacity 0.75s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.75s;
+}
+
+.slide.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 1;
+}
+
+.slide > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  transform: scale(1.02);
+  transition: transform 6s ease-out;
+}
+
+.slide.active > img {
+  transform: scale(1.06);
+}
+
+/* Cinematic multi-stop gradient scrim */
+.slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(0deg, #141414 0%, rgba(20, 20, 20, 0.85) 25%, rgba(20, 20, 20, 0.3) 60%, rgba(20, 20, 20, 0.8) 100%),
+    linear-gradient(90deg, rgba(20, 20, 20, 0.95) 0%, rgba(20, 20, 20, 0.6) 45%, transparent 75%);
+  pointer-events: none;
+}
+
+.slide-content {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  padding: 40px 4% 50px;
+  max-width: 1700px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.slide-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.slide-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--red);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 10px var(--red-glow);
+}
+
+.slide-title {
+  max-width: 720px;
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: #ffffff;
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.9);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.slide-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  color: #e5e5e5;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.slide-meta .dot {
+  color: #666;
+}
+
+.slide-meta span:first-of-type {
+  color: var(--green-match);
+  font-weight: 800;
+}
+
+.slide-dots {
+  position: absolute;
+  right: 4%;
+  bottom: 24px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.slide-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.4);
+  transition: width 0.25s ease, background 0.25s ease;
+  cursor: pointer;
+}
+
+.slide-dot.ativo {
+  width: 26px;
+  background: var(--red);
+  box-shadow: 0 0 10px var(--red-glow);
+}
+
+/* ========================================================
+   CATEGORY FILTERS (Netflix Category Tabs & Badges)
+   ======================================================== */
+.category-filter-container {
+  margin-bottom: 24px;
+}
+
+.category-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.category-count-label {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.category-select-wrapper {
+  position: relative;
+}
+
+.category-dropdown-select {
+  padding: 8px 36px 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  background: #202020;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #ffffff 50%),
+    linear-gradient(135deg, #ffffff 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.category-dropdown-select:focus {
+  border-color: var(--red);
+}
+
+.category-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 14px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.category-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #d1d1d1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.category-pill:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.category-pill.active {
+  background: var(--red);
+  color: #ffffff;
+  font-weight: 800;
+  border-color: var(--red);
+  box-shadow: 0 4px 14px var(--red-glow);
+}
+
+.pill-count {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.category-pill.active .pill-count {
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 1;
+}
+
+/* ========================================================
+   CAROUSELS (Netflix horizontal movie rows)
+   ======================================================== */
+.carousel-section {
+  margin-top: 36px;
+  position: relative;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4%;
+  margin-bottom: 14px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.see-all {
+  flex: 0 0 auto;
+  color: var(--red);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 6px 0;
+  transition: color 0.2s, transform 0.15s;
+}
+
+.see-all:hover {
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.carousel {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4% 20px;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carousel-empty {
+  color: #777777;
+  font-size: 0.88rem;
+  padding: 40px 0;
+}
+
+/* ========================================================
+   MEDIA CARDS (Netflix zoom & hover polish)
+   ======================================================== */
+.media-card {
+  position: relative;
+  flex: 0 0 155px;
+  width: 155px;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0.2, 1), z-index 0.25s;
+  will-change: transform;
+}
+
+.media-card:hover {
+  transform: scale(1.08) translateY(-6px);
+  z-index: 10;
+}
+
+.media-card:active {
+  transform: scale(0.98);
+}
+
+.poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #1b1b1b, #282828);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.media-card:hover .poster {
+  border-color: rgba(229, 9, 20, 0.6);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 16px var(--red-glow);
+}
+
+.poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.poster.canal img {
+  object-fit: contain;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 50%, #282828 0%, #151515 80%);
+}
+
+.media-card:hover .poster img {
+  transform: scale(1.05);
+}
+
+.card-fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffd166;
+  font-size: 0.85rem;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.card-fav:hover {
+  transform: scale(1.15);
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.card-title {
+  margin-top: 10px;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+}
+
+.card-meta {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* ========================================================
+   DYNAMIC PAGES & GRIDS (Browse, Search, Categories)
+   ======================================================== */
+.page-view {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 4% 64px;
+}
+
+.page-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.btn-back {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateX(-2px);
+}
+
+.page-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.5rem, 3.5vw, 2.3rem);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+}
+
+.page-subtitle {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 24px 16px;
+}
+
+.media-grid .media-card {
+  width: 100%;
+  flex: none;
+}
+
+.media-grid .poster {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2/3;
+}
+
+.media-grid .media-card:hover {
+  transform: translateY(-6px) scale(1.05);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  padding: 48px 24px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  opacity: 0.9;
+}
+
+.empty-state h2 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.empty-state p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.loading-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 140px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========================================================
+   GENRES & CATEGORIES (Netflix category cards)
+   ======================================================== */
+.genre-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.genre-type {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 170px;
+  padding: 26px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, #1d1d1d, #141414);
+  text-align: left;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.genre-type:hover {
+  border-color: rgba(229, 9, 20, 0.8);
+  transform: translateY(-4px);
+  background: linear-gradient(145deg, #241818, #161616);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(229, 9, 20, 0.2);
+}
+
+.genre-type::after {
+  content: attr(data-emoji);
+  position: absolute;
+  right: 12px;
+  bottom: -22px;
+  font-size: 7rem;
+  opacity: 0.08;
+  transform: rotate(-10deg);
+  pointer-events: none;
+}
+
+.genre-type strong {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.genre-type span {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.genre-type em {
+  margin-top: auto;
+  padding-top: 20px;
+  color: var(--red);
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+}
+
+.genres-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.genre-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 100px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #1a1a1a;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.genre-card:hover {
+  border-color: var(--red);
+  background: #231b1c;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.genre-card strong {
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+.genre-count {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+/* Search results */
+.search-section {
+  margin-top: 36px;
+}
+
+.search-section:first-child {
+  margin-top: 0;
+}
+
+.search-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
+}
+
+.search-section-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+}
+
+.search-section-head span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+/* ========================================================
+   CONTENT & VIDEO PLAYER (Netflix Cinema View)
+   ======================================================== */
+.content-page {
+  max-width: 1280px;
+}
+
+.content-topbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.content-heading {
+  margin-bottom: 20px;
+}
+
+.tipo-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: rgba(229, 9, 20, 0.16);
+  border: 1px solid rgba(229, 9, 20, 0.35);
+  color: #ff666d;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.content-heading h1 {
+  margin: 10px 0 0;
+  font-size: clamp(1.6rem, 4vw, 2.7rem);
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.content-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 10px;
+  color: #c0c0c0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.player-shell {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.9);
+}
+
+.player-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  background: #000000;
+}
+
+#videoPlayer {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000000;
+}
+
+.player-feedback {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.94);
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.feedback-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.player-feedback h3 {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.player-feedback p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.feedback-actions button {
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  background: #222222;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.feedback-actions button:hover {
+  background: #333333;
+  border-color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.player-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  background: #181818;
+}
+
+.control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 30px;
+  background: #252525;
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.18s ease;
+}
+
+.control-btn:hover {
+  background: #363636;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.control-btn:active {
+  transform: scale(0.96);
+}
+
+.control-btn.primario {
+  background: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 4px 14px var(--red-glow);
+}
+
+.control-btn.primario:hover {
+  background: var(--red-hover);
+  border-color: var(--red-hover);
+  box-shadow: 0 6px 20px rgba(229, 9, 20, 0.5);
+}
+
+.control-btn.voltar {
+  margin-left: auto;
+}
+
+.episodio-atual {
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--red);
+  color: #ffffff;
+  background: rgba(229, 9, 20, 0.08);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.player-shell:fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  border-radius: 0;
+  background: #000000;
+}
+
+.player-shell:fullscreen .player-wrapper {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+}
+
+.player-shell:fullscreen .player-controls {
+  flex: 0 0 auto;
+  background: #0a0a0a;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.player-shell:-webkit-full-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+}
+
+.player-shell:-webkit-full-screen .player-wrapper {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+/* ========================================================
+   SERIES EPISODES (Netflix horizontal episode list)
+   ======================================================== */
+.serie-area {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.serie-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.serie-toolbar h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.season-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.season-picker label {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.season-select {
+  max-width: 260px;
+  padding: 10px 38px 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  outline: none;
+  color: #ffffff;
+  background: #242424;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #fff 50%),
+    linear-gradient(135deg, #fff 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.2s;
+}
+
+.season-select:focus {
+  border-color: var(--red);
+}
+
+.episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.episode-card {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  background: #222222;
+  text-align: left;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.episode-card:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: #2b2b2b;
+  transform: translateY(-2px);
+}
+
+.episode-card.ativo {
+  border-color: var(--red);
+  background: #261617;
+  box-shadow: 0 0 0 1px var(--red) inset, 0 4px 16px var(--red-glow);
+}
+
+.episode-thumb {
+  position: relative;
+  flex: 0 0 115px;
+  min-height: 80px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(140deg, #333333, #1a1a1a);
+}
+
+.episode-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.9;
+}
+
+.ep-num {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.episode-thumb.tem-foto .ep-num {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+}
+
+.episode-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px 10px 0;
+}
+
+.episode-label {
+  color: var(--red);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.episode-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.episode-duration {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.episodes-grid .serie-message {
+  grid-column: 1 / -1;
+}
+
+.serie-message {
+  padding: 36px 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.serie-message strong {
+  display: block;
+  color: #ffffff;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.retry-serie {
+  margin-top: 14px;
+  padding: 10px 20px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #292929;
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-serie:hover {
+  background: #363636;
+  border-color: #ffffff;
+}
+
+.description-block {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.description-block h2 {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.description-block p {
+  margin: 0;
+  color: #cccccc;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-width: 950px;
+  white-space: pre-line;
+}
+
+/* ========================================================
+   TOAST NOTIFICATION (Netflix dark glass badge)
+   ======================================================== */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 2000;
+  max-width: calc(100vw - 32px);
+  padding: 13px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  background: rgba(24, 24, 24, 0.92);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  color: #ffffff;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(229, 9, 20, 0.25);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 14px);
+}
+
+.toast.show {
+  animation: fadeInOut 2.2s ease forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, 14px); }
+  12%, 82% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+/* ========================================================
+   RESPONSIVE DESIGN (Tablets & Mobile Phones)
+   ======================================================== */
+@media (max-width: 950px) {
+  .desktop-nav {
+    display: none;
+  }
+  .menu-trigger {
+    display: grid;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-inner {
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .header-logo {
+    font-size: 1.5rem;
+  }
+  .search-wrap {
+    max-width: none;
+  }
+  .search-input {
+    padding: 8px 14px 8px 34px;
+    font-size: 0.8rem;
+  }
+  .slideshow {
+    height: 420px;
+  }
+  .slide-content {
+    padding: 24px 16px 40px;
+  }
+  .slide-title {
+    font-size: clamp(1.4rem, 6.5vw, 2.2rem);
+    max-width: 90%;
+  }
+  .slide-meta {
+    font-size: 0.76rem;
+  }
+  .carousel-section {
+    margin-top: 26px;
+  }
+  .section-head {
+    padding: 0 16px;
+  }
+  .carousel {
+    padding: 6px 16px 16px;
+    gap: 10px;
+  }
+  .media-card {
+    flex: 0 0 130px;
+    width: 130px;
+  }
+  .media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 18px 12px;
+  }
+  .page-view {
+    padding: 18px 16px 52px;
+  }
+  .login-card {
+    padding: 38px 24px 30px;
+  }
+  .genre-menu {
+    grid-template-columns: 1fr;
+  }
+  .episodes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-inner {
+    padding: 0 12px;
+    gap: 10px;
+  }
+  .header-logo {
+    font-size: 1.35rem;
+  }
+  .slideshow {
+    height: 330px;
+  }
+  .slide-content {
+    padding: 16px 12px 30px;
+  }
+  .slide-title {
+    font-size: 1.35rem;
+  }
+  .media-card {
+    flex: 0 0 110px;
+    width: 110px;
+  }
+  .media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    gap: 14px 10px;
+  }
+  .content-heading h1 {
+    font-size: 1.45rem;
+  }
+  .control-btn {
+    padding: 8px 10px;
+    font-size: 0.68rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="login-screen">
+  <main class="login-card" aria-labelledby="loginTitle">
+    <div class="login-brand">
+      <h1 id="loginTitle" class="logo login-logo"><span class="branco">HMS</span><span class="vermelho">-TV</span></h1>
+      <p class="login-subtitle">IPTV E VIDA</p>
+    </div>
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="urlServidor">URL do Servidor IPTV</label>
+        <input id="urlServidor" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="http://servidor.com:8080" aria-label="URL do servidor">
+      </div>
+      <div class="form-group">
+        <label for="usuario">Usuário</label>
+        <input id="usuario" type="text" autocomplete="username" spellcheck="false" placeholder="Seu usuário" aria-label="Usuário">
+      </div>
+      <div class="form-group">
+        <label for="senha">Senha</label>
+        <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" aria-label="Senha">
+      </div>
+      <label class="remember-row" for="lembrarLogin">
+        <input id="lembrarLogin" type="checkbox">
+        <span class="checkbox-custom" aria-hidden="true"></span>
+        <span>Lembrar meus dados neste navegador</span>
+      </label>
+      <button id="btnEntrar" class="login-submit" type="submit">Entrar</button>
+    </form>
+    <div class="login-footnote">
+      Conecte-se com sua lista Xtream Codes para assistir a <strong>filmes</strong>, <strong>séries</strong> e <strong>canais ao vivo</strong> em qualquer dispositivo.
+    </div>
+  </main>
+</div>
+
+<!-- APP -->
+<div id="appScreen" class="hidden">
+  <header class="app-header">
+    <div class="header-inner">
+      <button class="icon-btn menu-trigger" type="button" onclick="abrirMenu()" aria-label="Abrir menu">☰</button>
+      <div class="logo header-logo" onclick="renderTelaPrincipal()" aria-label="HMS-TV"><span class="branco">HMS</span><span class="vermelho">-TV</span></div>
+      
+      <!-- Netflix Desktop Navigation Links -->
+      <nav class="desktop-nav" aria-label="Navegação principal">
+        <button class="nav-link active" type="button" onclick="renderTelaPrincipal()">Início</button>
+        <button class="nav-link" type="button" onclick="abrirSeries()">Séries</button>
+        <button class="nav-link" type="button" onclick="abrirFilmes()">Filmes</button>
+        <button class="nav-link" type="button" onclick="abrirCanais()">Canais</button>
+        <button class="nav-link" type="button" onclick="abrirFutebol()">Futebol</button>
+        <button class="nav-link" type="button" onclick="abrirAnimes()">Animes</button>
+        <button class="nav-link" type="button" onclick="abrirUltimos()">Minha Lista</button>
+        <button class="nav-link" type="button" onclick="abrirGeneros()">Gêneros</button>
+      </nav>
+
+      <div class="search-wrap">
+        <input id="buscaGlobal" class="search-input" type="search" autocomplete="off" placeholder="Buscar filmes, séries ou canais..." oninput="buscarConteudo(this.value)" aria-label="Buscar filmes, séries ou canais">
+      </div>
+
+      <div class="header-user-btn" onclick="abrirMenu()" title="Menu e Perfil">
+        <div class="user-avatar-badge"><span>H</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div id="menuOverlay" class="menu-overlay" onclick="fecharMenu()" aria-hidden="true"></div>
+  <aside id="menuLateral" class="menu-lateral" aria-label="Menu principal" aria-hidden="true">
+    <div class="menu-top">
+      <div class="logo menu-logo" aria-label="HMS-TV"><span class="branco">HMS</span><span class="vermelho">-TV</span></div>
+      <button class="icon-btn" type="button" onclick="fecharMenu()" aria-label="Fechar menu">✕</button>
+    </div>
+    <nav class="menu-nav">
+      <button class="menu-item" type="button" onclick="fecharMenu(); renderTelaPrincipal()"><span class="menu-icon">🏠</span><span>Início</span></button>
+      <button class="menu-item" type="button" onclick="fecharMenu(); abrirCanais()"><span class="menu-icon">📺</span><span>Canais</span></button>
+      <button class="menu-item" type="button" onclick="fecharMenu(); abrirFilmes()"><span class="menu-icon">🍿</span><span>Filmes</span></button>
+      <button class="menu-item" type="button" onclick="fecharMenu(); abrirSeries()"><span class="menu-icon">🎥</span><span>Séries</span></button>
+      <button class="menu-item" type="button" onclick="fecharMenu(); abrirFutebol()"><span class="menu-icon">⚽</span><span>Futebol</span></button>
+      <button class="menu-item" type="button" onclick="fecharMenu(); abrirAnimes()"><span class="menu-icon">🎌</span><span>Animes</span></button>
+      <button class="menu-item" type="button" onclick="fecharMenu(); abrirUltimos()"><span class="menu-icon">🕘</span><span>Últimos Assistidos</span></button>
+      <button class="menu-item" type="button" onclick="fecharMenu(); abrirGeneros()"><span class="menu-icon">🎭</span><span>Gêneros</span></button>
+      <button class="menu-item sair" type="button" onclick="fecharMenu(); logout()"><span class="menu-icon">⏻</span><span>Sair da Conta</span></button>
+    </nav>
+  </aside>
+
+  <main class="app-main">
+    <div id="homeView" class="home-view">
+      <section id="slideshow" class="slideshow hidden" aria-label="Destaques"></section>
+
+      <section class="carousel-section">
+        <div class="section-head">
+          <h2>🎬 ACABARAM DE CHEGAR</h2>
+          <button class="see-all" type="button" onclick="abrirFilmes()">VER MAIS →</button>
+        </div>
+        <div id="carrosselFilmes" class="carousel"></div>
+      </section>
+
+      <section class="carousel-section">
+        <div class="section-head">
+          <h2>📺 SÉRIES EM DESTAQUE</h2>
+          <button class="see-all" type="button" onclick="abrirSeries()">VER MAIS →</button>
+        </div>
+        <div id="carrosselSeries" class="carousel"></div>
+      </section>
+
+      <section class="carousel-section">
+        <div class="section-head">
+          <h2>📡 CANAIS AO VIVO</h2>
+          <button class="see-all" type="button" onclick="abrirCanais()">VER MAIS →</button>
+        </div>
+        <div id="carrosselCanais" class="carousel"></div>
+      </section>
+    </div>
+    <div id="dynamicView" class="hidden"></div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+"use strict";
+
+const PLACEHOLDER = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="360" viewBox="0 0 240 360">' +
+    '<rect width="240" height="360" fill="#181818"/>' +
+    '<rect x="86" y="118" width="68" height="9" rx="2" fill="#e50914"/>' +
+    '<rect x="86" y="118" width="9" height="100" rx="2" fill="#e50914"/>' +
+    '<rect x="145" y="118" width="9" height="100" rx="2" fill="#e50914"/>' +
+    '<text x="120" y="270" fill="#f5f5f5" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" text-anchor="middle">CINE PRO</text>' +
+  '</svg>'
+);
+const TIPO_LABEL = { filme: "Filme", serie: "Série", canal: "Canal" };
+
+let todosFilmes = [];
+let todosSeries = [];
+let todosCanais = [];
+let categoriasFilmes = [];
+let categoriasSeries = [];
+let categoriasCanais = [];
+
+let activeServerUrl = "";
+let activeUser = "";
+let activePass = "";
+let streamBaseFilmes = "";
+let streamBaseSeries = "";
+let streamBaseCanais = "";
+
+let favoritosCache = null;
+let currentItem = null;
+let currentTipo = "";
+let currentStreamUrl = "";
+let currentSerieId = null;
+let currentSerieName = "";
+let currentEpisodesData = {};
+let currentSeasons = [];
+let currentEpisode = null;
+
+let slideshowItems = [];
+let slideshowIndex = 0;
+let slideshowInterval = null;
+
+let clickTimeout = null;
+let ultimoCliqueCard = 0;
+let ultimoCardChave = "";
+
+let searchDebounce = null;
+let buscaAtiva = false;
+let toastTimer = null;
+let loginEmAndamento = false;
+
+/* ---------- Utilitarios ---------- */
+const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
+const $$ = (seletor, raiz = document) => Array.from(raiz.querySelectorAll(seletor));
+
+function storageGet(chave, padrao = null) {
+  try {
+    const valor = localStorage.getItem(chave);
+    return valor === null ? padrao : valor;
+  } catch (erro) {
+    return padrao;
+  }
+}
+
+function storageSet(chave, valor) {
+  try { localStorage.setItem(chave, String(valor)); } catch (erro) {}
+}
+
+function storageRemove(chave) {
+  try { localStorage.removeItem(chave); } catch (erro) {}
+}
+
+function storageJSON(chave, padrao = []) {
+  try {
+    const bruto = localStorage.getItem(chave);
+    if (!bruto) return padrao;
+    const dados = JSON.parse(bruto);
+    return Array.isArray(dados) ? dados : padrao;
+  } catch (erro) {
+    return padrao;
+  }
+}
+
+function salvarJSON(chave, valor) {
+  try { localStorage.setItem(chave, JSON.stringify(valor)); } catch (erro) {}
+}
+
+function esc(valor) {
+  return String(valor == null ? "" : valor).replace(/[&<>"']/g, function (caractere) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[caractere];
+  });
+}
+
+function normalizarTexto(valor) {
+  return String(valor == null ? "" : valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function normalizarLista(dados) {
+  return Array.isArray(dados) ? dados.filter(function (item) { return item && typeof item === "object"; }) : [];
+}
+
+function normalizarUrlBase(valor) {
+  return String(valor == null ? "" : valor).trim().replace(/\/+$/, "");
+}
+
+function construirApiUrl(url, usuario, senha, acao, parametros) {
+  const consulta = new URLSearchParams();
+  consulta.set("username", usuario);
+  consulta.set("password", senha);
+  if (acao) consulta.set("action", acao);
+  Object.keys(parametros || {}).forEach(function (chave) {
+    const valor = parametros[chave];
+    if (valor !== undefined && valor !== null) consulta.set(chave, String(valor));
+  });
+  return normalizarUrlBase(url) + "/player_api.php?" + consulta.toString();
+}
+
+function apiUrl(acao, parametros) {
+  return construirApiUrl(activeServerUrl, activeUser, activePass, acao, parametros);
+}
+
+async function fetchJson(url) {
+  const resposta = await fetch(url, { cache: "no-store" });
+  if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+  const texto = await resposta.text();
+  try {
+    return JSON.parse(texto);
+  } catch (erro) {
+    throw new Error("Resposta invalida da API");
+  }
+}
+
+function idDoItem(item, tipo) {
+  if (!item) return "";
+  if (tipo === "serie") {
+    return String(item.series_id != null ? item.series_id : (item.id != null ? item.id : (item.name || "")));
+  }
+  return String(item.stream_id != null ? item.stream_id : (item.id != null ? item.id : (item.name || "")));
+}
+
+function tipoDoItem(item) {
+  if (!item) return "filme";
+  if (item.tipo === "filme" || item.tipo === "serie" || item.tipo === "canal") return item.tipo;
+  if (item.series_id !== undefined && item.series_id !== null) return "serie";
+  if (item.stream_type === "live" || item.stream_type === "channel") return "canal";
+  if (item.stream_type === "movie") return "filme";
+  if (item.epg_channel_id !== undefined || item.tv_archive !== undefined) return "canal";
+  if (item._tipo === "filme" || item._tipo === "serie" || item._tipo === "canal") return item._tipo;
+  return "filme";
+}
+
+function chaveItem(item, tipo) {
+  const tipoFinal = tipo || tipoDoItem(item);
+  const id = idDoItem(item, tipoFinal);
+  return tipoFinal + ":" + (id || normalizarTexto(item && item.name));
+}
+
+function anoDoItem(item) {
+  if (!item) return "";
+  const data = item.releaseDate || item.release_date || item.releasedate || item.year || "";
+  const encontrado = String(data).match(/(19|20)\d{2}/);
+  if (encontrado) return encontrado[0];
+  const adicionado = Number(item.added);
+  if (Number.isFinite(adicionado) && adicionado > 0) {
+    const date = new Date(adicionado * 1000);
+    if (!isNaN(date.getTime())) return String(date.getFullYear());
+  }
+  return "";
+}
+
+function notaDoItem(item) {
+  const nota = Number(item && item.rating);
+  if (Number.isFinite(nota) && nota > 0) return nota.toFixed(1);
+  const notaCinco = Number(item && item.rating_5based);
+  if (Number.isFinite(notaCinco) && notaCinco > 0) return (notaCinco * 2).toFixed(1);
+  return "";
+}
+
+function metaDoCard(item, tipo) {
+  if (tipo === "canal") return "AO VIVO";
+  const ano = anoDoItem(item);
+  return ano || "—";
+}
+
+function valorImagem(valor) {
+  if (Array.isArray(valor)) {
+    for (let i = 0; i < valor.length; i += 1) {
+      if (valorImagem(valor[i])) return valorImagem(valor[i]);
+    }
+    return "";
+  }
+  if (typeof valor !== "string") return "";
+  const limpo = valor.trim();
+  if (!limpo || limpo === "null" || limpo === "undefined") return "";
+  return limpo;
+}
+
+function imagemDoItem(item) {
+  if (!item) return PLACEHOLDER;
+  const valores = [
+    item.stream_icon,
+    item.cover,
+    item.movie_image,
+    item.backdrop_path,
+    item.info && item.info.movie_image,
+    item.info && item.info.cover_big
+  ];
+  for (let i = 0; i < valores.length; i += 1) {
+    const imagem = valorImagem(valores[i]);
+    if (imagem) return imagem;
+  }
+  return PLACEHOLDER;
+}
+
+function imagemValida(item) {
+  return imagemDoItem(item) !== PLACEHOLDER;
+}
+
+function cortarTitulo(texto) {
+  const titulo = String(texto == null ? "" : texto);
+  if (titulo.length <= 30) return titulo;
+  return titulo.slice(0, 29).replace(/\s+$/, "") + "…";
+}
+
+function exibirToast(mensagem) {
+  const toast = $("#toast");
+  if (!toast) return;
+  toast.textContent = mensagem;
+  toast.classList.remove("show");
+  void toast.offsetWidth;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toast.classList.remove("show"); }, 2050);
+}
+
+function abrirMenu() {
+  const menu = $("#menuLateral");
+  const overlay = $("#menuOverlay");
+  if (!menu || !overlay) return;
+  menu.classList.add("aberto");
+  overlay.classList.add("aberto");
+  menu.setAttribute("aria-hidden", "false");
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("menu-open");
+}
+
+function fecharMenu() {
+  const menu = $("#menuLateral");
+  const overlay = $("#menuOverlay");
+  if (menu) {
+    menu.classList.remove("aberto");
+    menu.setAttribute("aria-hidden", "true");
+  }
+  if (overlay) {
+    overlay.classList.remove("aberto");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  document.body.classList.remove("menu-open");
+}
+
+function limparIntervaloSlideshow() {
+  if (slideshowInterval) {
+    clearInterval(slideshowInterval);
+    slideshowInterval = null;
+  }
+}
+
+function cancelarCliquePendente() {
+  clearTimeout(clickTimeout);
+  clickTimeout = null;
+  ultimoCliqueCard = 0;
+  ultimoCardChave = "";
+}
+
+function pararVideoAtual() {
+  const video = $("#videoPlayer");
+  if (video) {
+    try { video.pause(); } catch (erro) {}
+    video.removeAttribute("src");
+    try { video.load(); } catch (erro) {}
+  }
+  currentStreamUrl = "";
+  currentEpisode = null;
+}
+
+function obterFavoritos() {
+  if (!Array.isArray(favoritosCache)) {
+    favoritosCache = storageJSON("favoritos", []).filter(function (item) {
+      return item && typeof item === "object";
+    });
+  }
+  return favoritosCache;
+}
+
+function salvarFavoritos(lista) {
+  favoritosCache = lista;
+  salvarJSON("favoritos", lista);
+}
+
+function estaFavoritado(item, tipo) {
+  const tipoFinal = tipo || tipoDoItem(item);
+  const chave = chaveItem(item, tipoFinal);
+  return obterFavoritos().some(function (favorito) {
+    return chaveItem(favorito, tipoDoItem(favorito)) === chave;
+  });
+}
+
+function atualizarMarcadoresFavoritos(item, tipo, ativo) {
+  const chave = chaveItem(item, tipo);
+  $$(".card-fav").forEach(function (marcador) {
+    if (marcador.dataset.favKey === chave) marcador.classList.toggle("hidden", !ativo);
+  });
+}
+
+function toggleFavoritoDuploClique(item, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (!item) return;
+  const tipo = tipoDoItem(item);
+  const chave = chaveItem(item, tipo);
+  const favoritos = obterFavoritos();
+  const indice = favoritos.findIndex(function (favorito) {
+    return chaveItem(favorito, tipoDoItem(favorito)) === chave;
+  });
+  const adicionado = indice < 0;
+  if (adicionado) {
+    favoritos.unshift(Object.assign({}, item, { tipo: tipo }));
+    exibirToast("⭐ Adicionado aos favoritos");
+  } else {
+    favoritos.splice(indice, 1);
+    exibirToast("❤️ Removido dos favoritos");
+  }
+  salvarFavoritos(favoritos);
+  atualizarMarcadoresFavoritos(item, tipo, adicionado);
+}
+
+function salvarAssistido(item) {
+  if (!item || typeof item !== "object") return;
+  const tipo = tipoDoItem(item);
+  const chave = chaveItem(item, tipo);
+  const registro = Object.assign({}, item, { tipo: tipo });
+  const ultimos = obterUltimos().filter(function (antigo) {
+    return chaveItem(antigo, tipoDoItem(antigo)) !== chave;
+  });
+  ultimos.unshift(registro);
+  salvarJSON("ultimos", ultimos.slice(0, 30));
+}
+
+function obterUltimos() {
+  return storageJSON("ultimos", []).filter(function (item) { return item && typeof item === "object"; });
+}
+
+function prepararCategorias(itens, categorias) {
+  const mapa = new Map();
+  normalizarLista(categorias).forEach(function (categoria) {
+    if (!categoria) return;
+    const id = String(categoria.category_id != null ? categoria.category_id : "");
+    if (!id || id === "null") return;
+    mapa.set(id, {
+      category_id: id,
+      category_name: categoria.category_name || ("Categoria " + id),
+      parent_id: categoria.parent_id
+    });
+  });
+  normalizarLista(itens).forEach(function (item) {
+    const id = String(item.category_id != null ? item.category_id : "");
+    if (id && id !== "null" && !mapa.has(id)) {
+      mapa.set(id, { category_id: id, category_name: "Categoria " + id });
+    }
+  });
+  return Array.from(mapa.values()).sort(function (a, b) {
+    return String(a.category_name).localeCompare(String(b.category_name), "pt-BR");
+  });
+}
+
+function nomeCategoria(id, tipo) {
+  const lista = tipo === "serie" ? categoriasSeries : (tipo === "canal" ? categoriasCanais : categoriasFilmes);
+  const encontrada = lista.find(function (categoria) { return String(categoria.category_id) === String(id); });
+  return encontrada ? encontrada.category_name : "";
+}
+
+/* ---------- Login ---------- */
+function preencherLoginSalvo() {
+  if (storageGet("iptv_remember") !== "true") return;
+  const lembrar = $("#lembrarLogin");
+  const url = $("#urlServidor");
+  const usuario = $("#usuario");
+  const senha = $("#senha");
+  if (url) url.value = storageGet("iptv_url", "");
+  if (usuario) usuario.value = storageGet("iptv_user", "");
+  if (senha) senha.value = storageGet("iptv_pass", "");
+  if (lembrar) lembrar.checked = true;
+}
+
+async function entrar(event) {
+  if (event) event.preventDefault();
+  if (loginEmAndamento) return;
+
+  const campoUrl = $("#urlServidor");
+  const campoUsuario = $("#usuario");
+  const campoSenha = $("#senha");
+  const campoLembrar = $("#lembrarLogin");
+  const botao = $("#btnEntrar");
+
+  const url = normalizarUrlBase(campoUrl ? campoUrl.value : "");
+  const usuario = campoUsuario ? campoUsuario.value.trim() : "";
+  const senha = campoSenha ? campoSenha.value : "";
+  const lembrar = Boolean(campoLembrar && campoLembrar.checked);
+
+  if (!url || !usuario || !senha.trim()) {
+    alert("Preencha todos os campos para entrar.");
+    return;
+  }
+
+  if (lembrar) {
+    storageSet("iptv_url", url);
+    storageSet("iptv_user", usuario);
+    storageSet("iptv_pass", senha);
+    storageSet("iptv_remember", "true");
+  } else {
+    storageRemove("iptv_url");
+    storageRemove("iptv_user");
+    storageRemove("iptv_pass");
+    storageRemove("iptv_remember");
+  }
+
+  loginEmAndamento = true;
+  if (botao) {
+    botao.disabled = true;
+    botao.textContent = "Entrando...";
+  }
+
+  try {
+    const autenticacao = await fetchJson(construirApiUrl(url, usuario, senha));
+    const info = autenticacao && autenticacao.user_info;
+    const autenticado = info && (Number(info.auth) === 1 || String(info.status).toLowerCase() === "active");
+    if (!autenticado) throw new Error("AUTH");
+
+    activeServerUrl = url;
+    activeUser = usuario;
+    activePass = senha;
+    streamBaseFilmes = url + "/movie";
+    streamBaseSeries = url + "/series";
+    streamBaseCanais = url + "/live";
+
+    const respostas = await Promise.all([
+      fetchJson(apiUrl("get_vod_streams")),
+      fetchJson(apiUrl("get_series")),
+      fetchJson(apiUrl("get_live_streams")),
+      fetchJson(apiUrl("get_vod_categories")),
+      fetchJson(apiUrl("get_series_categories")),
+      fetchJson(apiUrl("get_live_categories"))
+    ]);
+
+    todosFilmes = normalizarLista(respostas[0]);
+    todosSeries = normalizarLista(respostas[1]);
+    todosCanais = normalizarLista(respostas[2]);
+    categoriasFilmes = prepararCategorias(todosFilmes, respostas[3]);
+    categoriasSeries = prepararCategorias(todosSeries, respostas[4]);
+    categoriasCanais = prepararCategorias(todosCanais, respostas[5]);
+    currentItem = null;
+    currentTipo = "";
+    currentStreamUrl = "";
+
+    const telaLogin = $("#loginScreen");
+    const app = $("#appScreen");
+    if (telaLogin) telaLogin.classList.add("hidden");
+    if (app) app.classList.remove("hidden");
+    const busca = $("#buscaGlobal");
+    if (busca) busca.value = "";
+    renderTelaPrincipal();
+  } catch (erro) {
+    activeServerUrl = "";
+    activeUser = "";
+    activePass = "";
+    streamBaseFilmes = "";
+    streamBaseSeries = "";
+    streamBaseCanais = "";
+    todosFilmes = [];
+    todosSeries = [];
+    todosCanais = [];
+    categoriasFilmes = [];
+    categoriasSeries = [];
+    categoriasCanais = [];
+    limparIntervaloSlideshow();
+    pararVideoAtual();
+    fecharMenu();
+    const telaLogin = $("#loginScreen");
+    const app = $("#appScreen");
+    if (telaLogin) telaLogin.classList.remove("hidden");
+    if (app) app.classList.add("hidden");
+    const mensagem = erro && erro.message === "AUTH"
+      ? "Usuário ou senha inválidos, ou conta inativa."
+      : "Não foi possível conectar ao servidor IPTV. Verifique a URL, o usuário e a senha.";
+    alert(mensagem);
+  } finally {
+    loginEmAndamento = false;
+    if (botao) {
+      botao.disabled = false;
+      botao.textContent = "Entrar";
+    }
+  }
+}
+
+/* ---------- URLs de stream ---------- */
+function urlDoFilme(item) {
+  return streamBaseFilmes + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "filme")) + ".mp4";
+}
+
+function urlDoCanal(item) {
+  return streamBaseCanais + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "canal")) + ".m3u8";
+}
+
+function urlDoEpisodio(episodio) {
+  const id = episodio && (episodio.id != null ? episodio.id : episodio.episode_id);
+  return streamBaseSeries + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(String(id)) + ".mp4";
+}
+
+function gerarUrlStream(item, tipo) {
+  if (!item) return "";
+  if (tipo === "filme") return urlDoFilme(item);
+  if (tipo === "canal") return urlDoCanal(item);
+  return "";
+}
+
+/* ---------- Cards ---------- */
+function prepararImagem(img, alt) {
+  img.alt = alt || "";
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.addEventListener("error", function aoFalhar() {
+    img.removeEventListener("error", aoFalhar);
+    if (img.src !== PLACEHOLDER) img.src = PLACEHOLDER;
+  });
+}
+
+function tratarCliqueCard(event, item, tipo) {
+  if (!item) return;
+  if (event) event.preventDefault();
+  const agora = Date.now();
+  const chave = chaveItem(item, tipo);
+  const mesmoCard = chave === ultimoCardChave;
+  const duploMouse = Boolean(event && event.detail === 2 && mesmoCard);
+  const duploToque = Boolean(mesmoCard && ultimoCliqueCard && (agora - ultimoCliqueCard) <= 250);
+  clearTimeout(clickTimeout);
+  clickTimeout = null;
+
+  if (duploMouse || duploToque) {
+    ultimoCliqueCard = 0;
+    ultimoCardChave = "";
+    toggleFavoritoDuploClique(item, event);
+    return;
+  }
+
+  ultimoCliqueCard = agora;
+  ultimoCardChave = chave;
+  clickTimeout = setTimeout(function () {
+    clickTimeout = null;
+    ultimoCliqueCard = 0;
+    ultimoCardChave = "";
+    abrirTelaConteudo(gerarUrlStream(item, tipo), item, tipo);
+  }, 250);
+}
+
+function criarCard(item, tipo) {
+  const tipoFinal = tipo || tipoDoItem(item);
+  const titulo = String(item && item.name != null ? item.name : "Sem título");
+  const card = document.createElement("article");
+  card.className = "media-card";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-label", TIPO_LABEL[tipoFinal] + ": " + titulo);
+
+  const poster = document.createElement("div");
+  poster.className = "poster" + (tipoFinal === "canal" ? " canal" : "");
+
+  const imagem = document.createElement("img");
+  imagem.src = imagemDoItem(item);
+  prepararImagem(imagem, titulo);
+  poster.appendChild(imagem);
+
+  const marcador = document.createElement("span");
+  marcador.className = "card-fav";
+  marcador.dataset.favKey = chaveItem(item, tipoFinal);
+  marcador.textContent = "★";
+  marcador.setAttribute("aria-hidden", "true");
+  if (!estaFavoritado(item, tipoFinal)) marcador.classList.add("hidden");
+  poster.appendChild(marcador);
+
+  const tituloEl = document.createElement("div");
+  tituloEl.className = "card-title";
+  tituloEl.textContent = cortarTitulo(titulo);
+  tituloEl.title = titulo;
+
+  const metaEl = document.createElement("div");
+  metaEl.className = "card-meta";
+  metaEl.textContent = metaDoCard(item, tipoFinal);
+
+  card.appendChild(poster);
+  card.appendChild(tituloEl);
+  card.appendChild(metaEl);
+
+  card.addEventListener("click", function (event) {
+    tratarCliqueCard(event, item, tipoFinal);
+  });
+  card.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      cancelarCliquePendente();
+      abrirTelaConteudo(gerarUrlStream(item, tipoFinal), item, tipoFinal);
+    }
+  });
+
+  return card;
+}
+
+function preencherCarrossel(id, itens, tipo, textoVazio) {
+  const elemento = document.getElementById(id);
+  if (!elemento) return;
+  elemento.innerHTML = "";
+  const lista = itens.slice(0, 20);
+  if (!lista.length) {
+    const vazio = document.createElement("p");
+    vazio.className = "carousel-empty";
+    vazio.textContent = textoVazio;
+    elemento.appendChild(vazio);
+    return;
+  }
+  lista.forEach(function (item) {
+    elemento.appendChild(criarCard(item, tipo));
+  });
+}
+
+/* ---------- Slideshow ---------- */
+function gerarItensSlideshow() {
+  const escolhidos = [];
+  const vistos = new Set();
+  const filmes = todosFilmes.filter(imagemValida);
+  const series = todosSeries.filter(imagemValida);
+
+  function adicionar(item, tipo) {
+    if (escolhidos.length >= 8) return;
+    const chave = chaveItem(item, tipo);
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+    escolhidos.push({ item: item, tipo: tipo });
+  }
+
+  filmes.slice(0, 5).forEach(function (item) { adicionar(item, "filme"); });
+  series.forEach(function (item) {
+    if (escolhidos.length < 8) adicionar(item, "serie");
+  });
+  filmes.slice(5).forEach(function (item) {
+    if (escolhidos.length < 8) adicionar(item, "filme");
+  });
+  series.forEach(function (item) {
+    if (escolhidos.length < 8) adicionar(item, "serie");
+  });
+  return escolhidos;
+}
+
+function criarSlide(entrada, indice) {
+  const item = entrada.item;
+  const tipo = entrada.tipo;
+  const titulo = String(item.name || "Sem título");
+  const slide = document.createElement("div");
+  slide.className = "slide";
+  slide.setAttribute("role", "button");
+  slide.tabIndex = 0;
+  slide.setAttribute("aria-label", "Abrir " + TIPO_LABEL[tipo] + ": " + titulo);
+  slide.dataset.indice = String(indice);
+
+  const imagem = document.createElement("img");
+  imagem.src = imagemDoItem(item);
+  imagem.alt = titulo;
+  imagem.loading = indice === 0 ? "eager" : "lazy";
+  imagem.decoding = "async";
+  imagem.addEventListener("error", function aoFalhar() {
+    imagem.removeEventListener("error", aoFalhar);
+    if (imagem.src !== PLACEHOLDER) imagem.src = PLACEHOLDER;
+  });
+
+  const conteudo = document.createElement("div");
+  conteudo.className = "slide-content";
+
+  const kicker = document.createElement("div");
+  kicker.className = "slide-kicker";
+  const tipoEl = document.createElement("span");
+  tipoEl.className = "slide-type";
+  tipoEl.textContent = TIPO_LABEL[tipo];
+  kicker.appendChild(tipoEl);
+
+  const tituloEl = document.createElement("h2");
+  tituloEl.className = "slide-title";
+  tituloEl.textContent = titulo;
+
+  const meta = document.createElement("div");
+  meta.className = "slide-meta";
+  const ano = anoDoItem(item);
+  const nota = notaDoItem(item);
+  const partes = [];
+  if (tipo === "canal") partes.push("AO VIVO");
+  if (ano) partes.push(ano);
+  partes.push("⭐ " + (nota || "N/A"));
+  partes.forEach(function (parte, posicao) {
+    if (posicao > 0) {
+      const separador = document.createElement("span");
+      separador.className = "dot";
+      separador.textContent = "•";
+      meta.appendChild(separador);
+    }
+    const span = document.createElement("span");
+    span.textContent = parte;
+    meta.appendChild(span);
+  });
+
+  conteudo.appendChild(kicker);
+  conteudo.appendChild(tituloEl);
+  conteudo.appendChild(meta);
+  slide.appendChild(imagem);
+  slide.appendChild(conteudo);
+
+  slide.addEventListener("click", function () { abrirSlide(indice); });
+  slide.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      abrirSlide(indice);
+    }
+  });
+  return slide;
+}
+
+function mostrarSlide(indice) {
+  const slides = $$("#slideshow .slide");
+  if (!slides.length) return;
+  slideshowIndex = ((indice % slides.length) + slides.length) % slides.length;
+  slides.forEach(function (slide, posicao) {
+    slide.classList.toggle("active", posicao === slideshowIndex);
+  });
+  $$("#slideshow .slide-dot").forEach(function (ponto, posicao) {
+    ponto.classList.toggle("ativo", posicao === slideshowIndex);
+    ponto.setAttribute("aria-current", posicao === slideshowIndex ? "true" : "false");
+  });
+}
+
+function iniciarSlideshow() {
+  limparIntervaloSlideshow();
+  if (slideshowItems.length < 2) return;
+  slideshowInterval = setInterval(function () {
+    mostrarSlide(slideshowIndex + 1);
+  }, 5000);
+}
+
+function renderSlideshow() {
+  const container = $("#slideshow");
+  if (!container) return;
+  limparIntervaloSlideshow();
+  container.innerHTML = "";
+  slideshowItems = gerarItensSlideshow();
+  if (!slideshowItems.length) {
+    container.classList.add("hidden");
+    return;
+  }
+  container.classList.remove("hidden");
+
+  slideshowItems.forEach(function (entrada, indice) {
+    container.appendChild(criarSlide(entrada, indice));
+  });
+
+  const dots = document.createElement("div");
+  dots.className = "slide-dots";
+  slideshowItems.forEach(function (entrada, indice) {
+    const ponto = document.createElement("button");
+    ponto.type = "button";
+    ponto.className = "slide-dot";
+    ponto.setAttribute("aria-label", "Ir para o destaque " + (indice + 1));
+    ponto.addEventListener("click", function (event) {
+      event.stopPropagation();
+      mostrarSlide(indice);
+    });
+    dots.appendChild(ponto);
+  });
+  container.appendChild(dots);
+
+  mostrarSlide(0);
+  iniciarSlideshow();
+}
+
+function abrirSlide(indice) {
+  const entrada = slideshowItems[indice];
+  if (!entrada) return;
+  abrirTelaConteudo(gerarUrlStream(entrada.item, entrada.tipo), entrada.item, entrada.tipo);
+}
+
+/* ---------- Home ---------- */
+function recentes(itens) {
+  return itens.slice().sort(function (a, b) {
+    return (Number(b.added) || 0) - (Number(a.added) || 0);
+  });
+}
+
+function renderTelaPrincipal() {
+  fecharMenu();
+  limparIntervaloSlideshow();
+  cancelarCliquePendente();
+  clearTimeout(searchDebounce);
+  searchDebounce = null;
+  pararVideoAtual();
+  buscaAtiva = false;
+  currentItem = null;
+  currentTipo = "";
+  currentSerieId = null;
+  currentSerieName = "";
+  currentEpisodesData = {};
+  currentSeasons = [];
+  currentEpisode = null;
+
+  const busca = $("#buscaGlobal");
+  if (busca) busca.value = "";
+  const home = $("#homeView");
+  const dinamica = $("#dynamicView");
+  if (dinamica) {
+    dinamica.innerHTML = "";
+    dinamica.classList.add("hidden");
+  }
+  if (home) home.classList.remove("hidden");
+
+  renderSlideshow();
+  preencherCarrossel("carrosselFilmes", recentes(todosFilmes), "filme", "Nenhum filme disponível.");
+  preencherCarrossel("carrosselSeries", todosSeries, "serie", "Nenhuma série disponível.");
+  preencherCarrossel("carrosselCanais", todosCanais, "canal", "Nenhum canal disponível.");
+  document.title = "HMS-TV — IPTV e Vida";
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+/* ---------- Navegacao e paginas ---------- */
+function prepararNavegacao(limparBusca) {
+  fecharMenu();
+  limparIntervaloSlideshow();
+  cancelarCliquePendente();
+  clearTimeout(searchDebounce);
+  searchDebounce = null;
+  pararVideoAtual();
+
+  if (limparBusca) {
+    const campo = $("#buscaGlobal");
+    if (campo) campo.value = "";
+    buscaAtiva = false;
+  }
+
+  currentItem = null;
+  currentTipo = "";
+  currentSerieId = null;
+  currentSerieName = "";
+  currentEpisodesData = {};
+  currentSeasons = [];
+  currentEpisode = null;
+
+  const home = $("#homeView");
+  const dinamica = $("#dynamicView");
+  if (home) home.classList.add("hidden");
+  if (dinamica) {
+    dinamica.classList.remove("hidden");
+    dinamica.innerHTML = "";
+  }
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function criarPagina(titulo, subtitulo, funcaoVoltar, limparBusca) {
+  prepararNavegacao(limparBusca !== false);
+  const dinamica = $("#dynamicView");
+  if (!dinamica) return null;
+  const voltar = funcaoVoltar || "renderTelaPrincipal()";
+  dinamica.innerHTML =
+    '<section class="page-view">' +
+      '<div class="page-top">' +
+        '<button class="btn-back" type="button" onclick="' + esc(voltar) + '">← Voltar</button>' +
+        '<div class="page-heading">' +
+          '<h1 class="page-title">' + esc(titulo) + '</h1>' +
+          (subtitulo ? '<p class="page-subtitle">' + esc(subtitulo) + '</p>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div id="paginaConteudo"></div>' +
+    '</section>';
+  return $("#paginaConteudo");
+}
+
+function criarEstadoVazio(icone, titulo, texto) {
+  const vazio = document.createElement("div");
+  vazio.className = "empty-state";
+  const iconeEl = document.createElement("div");
+  iconeEl.className = "empty-icon";
+  iconeEl.textContent = icone;
+  const tituloEl = document.createElement("h2");
+  tituloEl.textContent = titulo;
+  const textoEl = document.createElement("p");
+  textoEl.textContent = texto;
+  vazio.appendChild(iconeEl);
+  vazio.appendChild(tituloEl);
+  vazio.appendChild(textoEl);
+  return vazio;
+}
+
+function criarGrade(itens, tipo) {
+  const grade = document.createElement("div");
+  grade.className = "media-grid";
+  itens.forEach(function (item) {
+    grade.appendChild(criarCard(item, tipo));
+  });
+  return grade;
+}
+
+function contarTexto(quantidade, singular, plural) {
+  return quantidade + " " + (quantidade === 1 ? singular : plural);
+}
+
+function exibirGradeEntradas(entradas, titulo, subtitulo, funcaoVoltar) {
+  const area = criarPagina(titulo, subtitulo, funcaoVoltar, true);
+  if (!area) return;
+  if (!entradas.length) {
+    area.appendChild(criarEstadoVazio("🎬", "Nada por aqui ainda", "Não encontramos títulos disponíveis para esta seleção."));
+    return;
+  }
+  const grade = document.createElement("div");
+  grade.className = "media-grid";
+  entradas.forEach(function (entrada) {
+    grade.appendChild(criarCard(entrada.item, entrada.tipo));
+  });
+  area.appendChild(grade);
+}
+
+function exibirGrade(itens, tipo, titulo, subtitulo, funcaoVoltar) {
+  const entradas = itens.map(function (item) { return { item: item, tipo: tipo }; });
+  exibirGradeEntradas(entradas, titulo, subtitulo, funcaoVoltar);
+}
+
+function exibirGradeComCategorias(itensCompletos, categoriasLista, tipo, tituloBase, funcaoVoltar, idCategoriaInicial) {
+  let categoriaAtiva = String(idCategoriaInicial || "");
+
+  const mapaCategorias = normalizarLista(categoriasLista).map(function (cat) {
+    const id = String(cat.category_id != null ? cat.category_id : "");
+    const count = itensCompletos.filter(function (i) { return String(i.category_id) === id; }).length;
+    return {
+      category_id: id,
+      category_name: cat.category_name || ("Categoria " + id),
+      count: count
+    };
+  }).filter(function (cat) { return cat.count > 0; });
+
+  const area = criarPagina(tituloBase, "", funcaoVoltar, true);
+  if (!area) return;
+
+  const containerFiltros = document.createElement("div");
+  containerFiltros.className = "category-filter-container";
+
+  const topRow = document.createElement("div");
+  topRow.className = "category-top-row";
+
+  const totalGeral = itensCompletos.length;
+  const labelContador = document.createElement("div");
+  labelContador.className = "category-count-label";
+  topRow.appendChild(labelContador);
+
+  if (mapaCategorias.length > 0) {
+    const selectWrapper = document.createElement("div");
+    selectWrapper.className = "category-select-wrapper";
+
+    const select = document.createElement("select");
+    select.className = "category-dropdown-select";
+    select.setAttribute("aria-label", "Filtrar por categoria");
+
+    const optTodas = document.createElement("option");
+    optTodas.value = "";
+    optTodas.textContent = "Todas as categorias (" + totalGeral + ")";
+    select.appendChild(optTodas);
+
+    mapaCategorias.forEach(function (cat) {
+      const opt = document.createElement("option");
+      opt.value = cat.category_id;
+      opt.textContent = cat.category_name + " (" + cat.count + ")";
+      if (cat.category_id === categoriaAtiva) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    select.addEventListener("change", function (e) {
+      selecionarCategoria(e.target.value);
+    });
+    selectWrapper.appendChild(select);
+    topRow.appendChild(selectWrapper);
+  }
+
+  containerFiltros.appendChild(topRow);
+
+  if (mapaCategorias.length > 0) {
+    const scrollBar = document.createElement("div");
+    scrollBar.className = "category-filter-bar";
+
+    const pillTodas = document.createElement("button");
+    pillTodas.type = "button";
+    pillTodas.className = "category-pill" + (!categoriaAtiva ? " active" : "");
+    pillTodas.dataset.catId = "";
+    pillTodas.innerHTML = '<span>Todas</span><span class="pill-count">' + totalGeral + '</span>';
+    pillTodas.addEventListener("click", function () { selecionarCategoria(""); });
+    scrollBar.appendChild(pillTodas);
+
+    mapaCategorias.forEach(function (cat) {
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = "category-pill" + (cat.category_id === categoriaAtiva ? " active" : "");
+      pill.dataset.catId = cat.category_id;
+      pill.innerHTML = '<span>' + esc(cat.category_name) + '</span><span class="pill-count">' + cat.count + '</span>';
+      pill.addEventListener("click", function () { selecionarCategoria(cat.category_id); });
+      scrollBar.appendChild(pill);
+    });
+
+    containerFiltros.appendChild(scrollBar);
+  }
+
+  area.appendChild(containerFiltros);
+
+  const containerGrade = document.createElement("div");
+  containerGrade.id = "gradeConteudoCategoria";
+  area.appendChild(containerGrade);
+
+  function selecionarCategoria(novoId) {
+    categoriaAtiva = String(novoId || "");
+
+    const select = containerFiltros.querySelector(".category-dropdown-select");
+    if (select) select.value = categoriaAtiva;
+
+    containerFiltros.querySelectorAll(".category-pill").forEach(function (p) {
+      const ehAtivo = p.dataset.catId === categoriaAtiva;
+      p.classList.toggle("active", ehAtivo);
+      if (ehAtivo) {
+        try { p.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); } catch (erro) {}
+      }
+    });
+
+    const itensFiltrados = !categoriaAtiva
+      ? itensCompletos
+      : itensCompletos.filter(function (item) { return String(item.category_id) === categoriaAtiva; });
+
+    const nomeCat = categoriaAtiva ? (nomeCategoria(categoriaAtiva, tipo) || "Categoria") : "";
+    if (categoriaAtiva) {
+      labelContador.textContent = contarTexto(itensFiltrados.length, "título", "títulos") + " em " + nomeCat;
+    } else {
+      labelContador.textContent = contarTexto(itensFiltrados.length, "título disponível", "títulos disponíveis") + " no total";
+    }
+
+    containerGrade.innerHTML = "";
+    if (!itensFiltrados.length) {
+      containerGrade.appendChild(criarEstadoVazio("🎬", "Nenhum conteúdo nesta categoria", "Tente escolher outra categoria ou veja todos os títulos."));
+      return;
+    }
+    containerGrade.appendChild(criarGrade(itensFiltrados, tipo));
+  }
+
+  selecionarCategoria(categoriaAtiva);
+}
+
+function abrirFilmes(categoriaId) {
+  exibirGradeComCategorias(
+    todosFilmes,
+    categoriasFilmes,
+    "filme",
+    "🍿 Filmes",
+    "renderTelaPrincipal()",
+    categoriaId
+  );
+}
+
+function abrirSeries(categoriaId) {
+  exibirGradeComCategorias(
+    todosSeries,
+    categoriasSeries,
+    "serie",
+    "🎥 Séries",
+    "renderTelaPrincipal()",
+    categoriaId
+  );
+}
+
+function abrirCanais(categoriaId) {
+  exibirGradeComCategorias(
+    todosCanais,
+    categoriasCanais,
+    "canal",
+    "📺 Canais Ao Vivo",
+    "renderTelaPrincipal()",
+    categoriaId
+  );
+}
+
+function filtrarPorTermos(itens, termos) {
+  const listaTermos = termos.map(normalizarTexto);
+  return itens.filter(function (item) {
+    const alvo = normalizarTexto(item.name);
+    return listaTermos.some(function (termo) { return alvo.indexOf(termo) !== -1; });
+  });
+}
+
+function abrirFutebol() {
+  const termos = ["premiere", "sportv", "espn", "fox sports", "futebol", "jogo", "bein"];
+  const canais = filtrarPorTermos(todosCanais, termos);
+  exibirGrade(
+    canais,
+    "canal",
+    "⚽ Futebol",
+    contarTexto(canais.length, "canal encontrado", "canais encontrados"),
+    "renderTelaPrincipal()"
+  );
+}
+
+function abrirAnimes() {
+  const termos = ["anime", "naruto", "dragon ball", "one piece", "demon slayer"];
+  const filmes = filtrarPorTermos(todosFilmes, termos).map(function (item) {
+    return { item: item, tipo: "filme" };
+  });
+  const series = filtrarPorTermos(todosSeries, termos).map(function (item) {
+    return { item: item, tipo: "serie" };
+  });
+  const entradas = filmes.concat(series);
+  exibirGradeEntradas(
+    entradas,
+    "🎌 Animes",
+    contarTexto(entradas.length, "título encontrado", "títulos encontrados"),
+    "renderTelaPrincipal()"
+  );
+}
+
+function abrirUltimos() {
+  const entradas = obterUltimos().slice(0, 30).map(function (item) {
+    return { item: item, tipo: tipoDoItem(item) };
+  });
+  exibirGradeEntradas(
+    entradas,
+    "🕘 Últimos Assistidos",
+    entradas.length ? contarTexto(entradas.length, "título no histórico", "títulos no histórico") : "Seu histórico está vazio",
+    "renderTelaPrincipal()"
+  );
+}
+
+function abrirGeneros() {
+  const area = criarPagina("🎭 Gêneros", "Escolha o tipo de conteúdo para navegar pelas categorias.", "renderTelaPrincipal()", true);
+  if (!area) return;
+  const menu = document.createElement("div");
+  menu.className = "genre-menu";
+  const opcoes = [
+    { tipo: "filme", emoji: "🍿", titulo: "Filmes", descricao: "Aventura, ação, comédia e muito mais.", qtd: categoriasFilmes.length, acao: abrirGenerosFilmes },
+    { tipo: "serie", emoji: "🎥", titulo: "Séries", descricao: "Dramas, sitcoms, documentários e temporadas completas.", qtd: categoriasSeries.length, acao: abrirGenerosSeries },
+    { tipo: "canal", emoji: "📺", titulo: "Canais", descricao: "Encontre canais por esporte, notícias, filmes e mais.", qtd: categoriasCanais.length, acao: abrirGenerosCanais }
+  ];
+  opcoes.forEach(function (opcao) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "genre-type";
+    botao.dataset.emoji = opcao.emoji;
+    const titulo = document.createElement("strong");
+    titulo.textContent = opcao.emoji + " " + opcao.titulo;
+    const descricao = document.createElement("span");
+    descricao.textContent = opcao.descricao;
+    const contagem = document.createElement("em");
+    contagem.textContent = contarTexto(opcao.qtd, "categoria", "categorias") + " →";
+    botao.appendChild(titulo);
+    botao.appendChild(descricao);
+    botao.appendChild(contagem);
+    botao.addEventListener("click", opcao.acao);
+    menu.appendChild(botao);
+  });
+  area.appendChild(menu);
+}
+
+function renderizarCategorias(area, categorias, itens, tipo, aoSelecionar) {
+  if (!area) return;
+  if (!categorias.length) {
+    area.appendChild(criarEstadoVazio("🎭", "Nenhuma categoria encontrada", "A categoria deste conteúdo ainda não está disponível."));
+    return;
+  }
+  const grade = document.createElement("div");
+  grade.className = "genres-grid";
+  categorias.forEach(function (categoria) {
+    const quantidade = itens.filter(function (item) {
+      return String(item.category_id) === String(categoria.category_id);
+    }).length;
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "genre-card";
+    const nome = document.createElement("strong");
+    nome.textContent = categoria.category_name || "Categoria";
+    const contagem = document.createElement("span");
+    contagem.className = "genre-count";
+    contagem.textContent = contarTexto(quantidade, "título", "títulos");
+    botao.appendChild(nome);
+    botao.appendChild(contagem);
+    botao.addEventListener("click", function () {
+      aoSelecionar(String(categoria.category_id), categoria.category_name || "Categoria");
+    });
+    grade.appendChild(botao);
+  });
+  area.appendChild(grade);
+}
+
+function abrirGenerosFilmes() {
+  const area = criarPagina("🎭 Gêneros de Filmes", "Escolha uma categoria para ver os filmes.", "abrirGeneros()", true);
+  renderizarCategorias(area, categoriasFilmes, todosFilmes, "filme", abrirFilmesCategoria);
+}
+
+function abrirGenerosSeries() {
+  const area = criarPagina("🎭 Gêneros de Séries", "Escolha uma categoria para ver as séries.", "abrirGeneros()", true);
+  renderizarCategorias(area, categoriasSeries, todosSeries, "serie", abrirSeriesCategoria);
+}
+
+function abrirGenerosCanais() {
+  const area = criarPagina("🎭 Gêneros de Canais", "Escolha uma categoria para ver os canais.", "abrirGeneros()", true);
+  renderizarCategorias(area, categoriasCanais, todosCanais, "canal", abrirCanaisCategoria);
+}
+
+function abrirFilmesCategoria(categoryId, categoryName) {
+  abrirFilmes(categoryId);
+}
+
+function abrirSeriesCategoria(categoryId, categoryName) {
+  abrirSeries(categoryId);
+}
+
+function abrirCanaisCategoria(categoryId, categoryName) {
+  abrirCanais(categoryId);
+}
+
+/* ---------- Busca global ---------- */
+function buscarConteudo(valor) {
+  clearTimeout(searchDebounce);
+  searchDebounce = null;
+  const termo = String(valor == null ? "" : valor).trim();
+  if (!termo) {
+    if (buscaAtiva) renderTelaPrincipal();
+    return;
+  }
+  searchDebounce = setTimeout(function () {
+    searchDebounce = null;
+    executarBusca(termo);
+  }, 300);
+}
+
+function adicionarSecaoBusca(area, titulo, itens, tipo) {
+  if (!itens.length) return;
+  const secao = document.createElement("section");
+  secao.className = "search-section";
+  const topo = document.createElement("div");
+  topo.className = "search-section-head";
+  const tituloEl = document.createElement("h2");
+  tituloEl.textContent = titulo;
+  const quantidade = document.createElement("span");
+  quantidade.textContent = contarTexto(itens.length, "resultado", "resultados");
+  topo.appendChild(tituloEl);
+  topo.appendChild(quantidade);
+  secao.appendChild(topo);
+  secao.appendChild(criarGrade(itens, tipo));
+  area.appendChild(secao);
+}
+
+function executarBusca(termo) {
+  const consulta = normalizarTexto(termo);
+  const filmes = todosFilmes.filter(function (item) {
+    return normalizarTexto(item.name).indexOf(consulta) !== -1;
+  });
+  const series = todosSeries.filter(function (item) {
+    return normalizarTexto(item.name).indexOf(consulta) !== -1;
+  });
+  const canais = todosCanais.filter(function (item) {
+    return normalizarTexto(item.name).indexOf(consulta) !== -1;
+  });
+  const total = filmes.length + series.length + canais.length;
+  const area = criarPagina(
+    "🔍 Resultados",
+    total
+      ? contarTexto(total, "resultado para", "resultados para") + ' "' + termo + '"'
+      : 'Nenhum resultado para "' + termo + '"',
+    "renderTelaPrincipal()",
+    false
+  );
+  if (!area) return;
+  buscaAtiva = true;
+  document.title = "Busca: " + termo + " — HMS-TV";
+  if (!total) {
+    area.appendChild(criarEstadoVazio("🔎", "Nenhum resultado encontrado", "Tente buscar por outro nome de filme, série ou canal."));
+    return;
+  }
+  adicionarSecaoBusca(area, "Filmes", filmes, "filme");
+  adicionarSecaoBusca(area, "Séries", series, "serie");
+  adicionarSecaoBusca(area, "Canais", canais, "canal");
+}
+
+/* ---------- Tela de conteudo e player ---------- */
+function metaDoConteudo(item, tipo) {
+  const partes = [];
+  if (tipo === "canal") {
+    partes.push("🔴 AO VIVO");
+  } else {
+    const ano = anoDoItem(item);
+    if (ano) partes.push(ano);
+  }
+  const nota = notaDoItem(item);
+  if (nota) partes.push("⭐ " + nota);
+  const categoria = nomeCategoria(item.category_id, tipo);
+  if (categoria) partes.push(categoria);
+  if (tipo === "serie" && item.episode_run_time) partes.push(item.episode_run_time + " min");
+  return partes.join(" • ");
+}
+
+function configurarEventosVideo() {
+  const video = $("#videoPlayer");
+  if (!video) return;
+  video.addEventListener("error", function () {
+    if (video !== $("#videoPlayer")) return;
+    if (currentStreamUrl) mostrarErroVideo();
+  });
+  video.addEventListener("loadeddata", function () {
+    if (video === $("#videoPlayer")) ocultarFeedbackPlayer();
+  });
+  video.addEventListener("playing", function () {
+    if (video === $("#videoPlayer")) ocultarFeedbackPlayer();
+  });
+}
+
+function mostrarFeedbackPlayer(titulo, texto, mostrarAcoes, icone) {
+  const feedback = $("#playerFeedback");
+  if (!feedback) return;
+  const tituloEl = $("#feedbackTitle");
+  const textoEl = $("#feedbackText");
+  const iconeEl = $("#feedbackIcon");
+  const acoes = $("#feedbackActions");
+  if (tituloEl) tituloEl.textContent = titulo || "Não foi possível reproduzir";
+  if (textoEl) textoEl.textContent = texto || "Tente usar um player externo para assistir a este conteúdo.";
+  if (iconeEl) iconeEl.textContent = icone || "⚠️";
+  if (acoes) acoes.classList.toggle("hidden", !mostrarAcoes);
+  feedback.classList.remove("hidden");
+}
+
+function ocultarFeedbackPlayer() {
+  const feedback = $("#playerFeedback");
+  if (feedback) feedback.classList.add("hidden");
+}
+
+function mostrarErroVideo() {
+  const alternativas = currentStreamUrl.indexOf(".m3u8") !== -1 || currentTipo === "canal";
+  mostrarFeedbackPlayer(
+    "Não foi possível reproduzir",
+    alternativas
+      ? "Este navegador pode não suportar transmissões ao vivo. Abra em um player compatível."
+      : "O formato ou a conexão não é compatível com este navegador. Tente um player externo.",
+    true,
+    "⚠️"
+  );
+}
+
+function definirStream(url, tipo) {
+  const video = $("#videoPlayer");
+  if (!video) return;
+  if (!url) {
+    mostrarFeedbackPlayer("Conteúdo indisponível", "Nenhum stream foi encontrado para este título.", false, "📵");
+    return;
+  }
+  currentStreamUrl = url;
+  ocultarFeedbackPlayer();
+  video.src = url;
+  try { video.load(); } catch (erro) {}
+  const tentativa = video.play();
+  if (tentativa && typeof tentativa.catch === "function") {
+    tentativa.catch(function () {});
+  }
+}
+
+function abrirTelaConteudo(url, item, tipo) {
+  if (!item) return;
+  const tipoFinal = tipo || tipoDoItem(item);
+  prepararNavegacao(false);
+  buscaAtiva = false;
+  currentItem = item;
+  currentTipo = tipoFinal;
+  currentStreamUrl = "";
+  currentSerieId = tipoFinal === "serie" ? (item.series_id != null ? item.series_id : item.id) : null;
+  currentSerieName = tipoFinal === "serie" ? String(item.name || "Série") : "";
+  currentEpisodesData = {};
+  currentSeasons = [];
+  currentEpisode = null;
+  salvarAssistido(item);
+
+  const home = $("#homeView");
+  const dinamica = $("#dynamicView");
+  if (home) home.classList.add("hidden");
+  if (!dinamica) return;
+  dinamica.classList.remove("hidden");
+
+  const nome = String(item.name || "Sem título");
+  const poster = imagemDoItem(item);
+  const meta = metaDoConteudo(item, tipoFinal);
+  const descricao = item.plot || item.description || item.descricao || "";
+  const categoria = nomeCategoria(item.category_id, tipoFinal);
+
+  dinamica.innerHTML =
+    '<section class="page-view content-page">' +
+      '<div class="content-topbar">' +
+        '<button class="btn-back" type="button" onclick="renderTelaPrincipal()">← Voltar</button>' +
+      '</div>' +
+      '<div class="content-heading">' +
+        '<span class="tipo-pill">' + esc(TIPO_LABEL[tipoFinal]) + '</span>' +
+        '<h1 id="tituloConteudo">' + esc(nome) + '</h1>' +
+        '<div id="metaConteudo" class="content-meta"></div>' +
+      '</div>' +
+      '<div class="player-shell" id="playerShell">' +
+        '<div class="player-wrapper" id="playerWrapper">' +
+          '<video id="videoPlayer" playsinline preload="metadata" poster="' + esc(poster) + '"></video>' +
+          '<div id="playerFeedback" class="player-feedback hidden">' +
+            '<span id="feedbackIcon" class="feedback-icon">⚠️</span>' +
+            '<h3 id="feedbackTitle">Não foi possível reproduzir</h3>' +
+            '<p id="feedbackText">Tente usar um player externo.</p>' +
+            '<div id="feedbackActions" class="feedback-actions">' +
+              '<button type="button" onclick="playerPlay()">▶ Tentar novamente</button>' +
+              '<button type="button" onclick="abrirMX()">MX Player</button>' +
+              '<button type="button" onclick="abrirVLC()">VLC</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="player-controls">' +
+          '<button class="control-btn primario" type="button" onclick="playerPlay()" aria-label="Reproduzir">▶ Play</button>' +
+          '<button class="control-btn" type="button" onclick="playerPause()" aria-label="Pausar">⏸ Pause</button>' +
+          '<button class="control-btn" type="button" onclick="playerStop()" aria-label="Parar">⏹ Stop</button>' +
+          '<button class="control-btn" type="button" onclick="playerBack()" aria-label="Voltar 10 segundos">⏪ −10s</button>' +
+          '<button class="control-btn" type="button" onclick="playerForward()" aria-label="Avançar 10 segundos">⏩ +10s</button>' +
+          '<button class="control-btn" type="button" onclick="toggleFullScreen()" aria-label="Tela cheia">⛶ Tela cheia</button>' +
+          '<button class="control-btn" type="button" onclick="abrirMX()" aria-label="Abrir no MX Player">📱 MX Player</button>' +
+          '<button class="control-btn" type="button" onclick="abrirVLC()" aria-label="Abrir no VLC">🟠 VLC</button>' +
+          '<button class="control-btn voltar" type="button" onclick="renderTelaPrincipal()" aria-label="Voltar para o início">↩ Voltar</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="episodioAtual" class="episodio-atual hidden"></div>' +
+      '<div id="serieArea" class="serie-area hidden"></div>' +
+      '<div id="descricaoWrap" class="description-block' + (descricao ? "" : " hidden") + '">' +
+        '<h2>Sinopse</h2>' +
+        '<p id="descricaoConteudo"></p>' +
+      '</div>' +
+    '</section>';
+
+  const metaEl = $("#metaConteudo");
+  if (metaEl) {
+    metaEl.textContent = meta || (categoria || "");
+  }
+  const descricaoEl = $("#descricaoConteudo");
+  if (descricaoEl) descricaoEl.textContent = descricao || "";
+
+  configurarEventosVideo();
+  document.title = nome + " — HMS-TV";
+  window.scrollTo({ top: 0, behavior: "auto" });
+
+  if (tipoFinal === "serie") {
+    const area = $("#serieArea");
+    if (area) {
+      area.classList.remove("hidden");
+      area.innerHTML = '<div class="loading-inline"><span class="spinner"></span>Carregando episódios...</div>';
+    }
+    carregarSerieDetalhes(item);
+  } else {
+    const endereco = url || gerarUrlStream(item, tipoFinal);
+    definirStream(endereco, tipoFinal);
+  }
+}
+
+function playerPlay() {
+  const video = $("#videoPlayer");
+  if (!video || !video.getAttribute("src")) return;
+  const retorno = video.play();
+  if (retorno && typeof retorno.catch === "function") {
+    retorno.catch(function () {});
+  }
+}
+
+function playerPause() {
+  const video = $("#videoPlayer");
+  if (video) {
+    try { video.pause(); } catch (erro) {}
+  }
+}
+
+function playerStop() {
+  const video = $("#videoPlayer");
+  if (!video) return;
+  try {
+    video.pause();
+    video.currentTime = 0;
+  } catch (erro) {}
+}
+
+function playerBack() {
+  const video = $("#videoPlayer");
+  if (!video) return;
+  try { video.currentTime = Math.max(0, video.currentTime - 10); } catch (erro) {}
+}
+
+function playerForward() {
+  const video = $("#videoPlayer");
+  if (!video) return;
+  try {
+    const limite = Number.isFinite(video.duration) ? video.duration : video.currentTime + 10;
+    video.currentTime = Math.min(limite, video.currentTime + 10);
+  } catch (erro) {}
+}
+
+function toggleFullScreen() {
+  const shell = $("#playerShell");
+  const video = $("#videoPlayer");
+  const emTelaCheia = document.fullscreenElement || document.webkitFullscreenElement;
+  if (emTelaCheia) {
+    try {
+      if (document.exitFullscreen) {
+        const saida = document.exitFullscreen();
+        if (saida && typeof saida.catch === "function") saida.catch(function () {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    } catch (erro) {}
+    return;
+  }
+  if (shell && shell.requestFullscreen) {
+    try {
+      const pedido = shell.requestFullscreen();
+      if (pedido && typeof pedido.catch === "function") {
+        pedido.catch(function () {
+          if (video && video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+        });
+      }
+    } catch (erro) {
+      if (video && video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    }
+    return;
+  }
+  if (shell && shell.webkitRequestFullscreen) {
+    shell.webkitRequestFullscreen();
+    return;
+  }
+  if (video && video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+}
+
+function abrirPlayerExterno(pacote, nomePlayer) {
+  if (!currentStreamUrl) {
+    exibirToast("Nenhum vídeo disponível para abrir.");
+    return;
+  }
+  const url = currentStreamUrl;
+  const android = /Android/i.test(navigator.userAgent || "");
+  if (android) {
+    const semProtocolo = url.replace(/^https?:\/\//, "");
+    const ehHls = /\.m3u8(\?|$)/i.test(url) || currentTipo === "canal";
+    const mime = ehHls ? "application/x-mpegURL" : "video/*";
+    const titulo = encodeURIComponent(currentItem && currentItem.name ? currentItem.name : "HMS-TV");
+    const intento = "intent://" + semProtocolo + "#Intent;package=" + pacote + ";S.title=" + titulo + ";type=" + mime + ";end";
+    try {
+      window.location.href = intento;
+    } catch (erro) {
+      window.open(url, "_blank", "noopener");
+    }
+  } else {
+    const janela = window.open(url, "_blank", "noopener");
+    if (!janela) exibirToast("Permita pop-ups para abrir no " + nomePlayer + ".");
+  }
+}
+
+function abrirMX() {
+  abrirPlayerExterno("com.mxtech.videoplayer.ad", "MX Player");
+}
+
+function abrirVLC() {
+  abrirPlayerExterno("org.videolan.vlc", "VLC");
+}
+
+/* ---------- Series ---------- */
+function obterEpisodiosTemporada(numeroTemporada) {
+  if (!currentEpisodesData || typeof currentEpisodesData !== "object") return [];
+  const chaveString = String(numeroTemporada);
+  let episodios = currentEpisodesData[chaveString];
+  if (!Array.isArray(episodios)) episodios = currentEpisodesData[Number(numeroTemporada)];
+  if (!Array.isArray(episodios)) episodios = currentEpisodesData[chaveString + ".0"];
+  return normalizarLista(episodios).slice().sort(function (a, b) {
+    const numeroA = Number(a.episode_num);
+    const numeroB = Number(b.episode_num);
+    if (Number.isFinite(numeroA) && Number.isFinite(numeroB)) return numeroA - numeroB;
+    if (Number.isFinite(numeroA)) return -1;
+    if (Number.isFinite(numeroB)) return 1;
+    return 0;
+  });
+}
+
+function atualizarDescricaoSerie(plot) {
+  if (!plot) return;
+  const wrap = $("#descricaoWrap");
+  const texto = $("#descricaoConteudo");
+  if (wrap) wrap.classList.remove("hidden");
+  if (texto) texto.textContent = plot;
+}
+
+function montarTemporadas(dados) {
+  const mapa = new Map();
+  normalizarLista(dados && dados.seasons).forEach(function (temporada) {
+    if (!temporada) return;
+    const numero = Number(
+      temporada.season_number != null ? temporada.season_number
+        : (temporada.season != null ? temporada.season : temporada.id)
+    );
+    if (!Number.isFinite(numero)) return;
+    mapa.set(numero, Object.assign({}, temporada, {
+      season_number: numero,
+      name: temporada.name || temporada.season_name || ("Temporada " + numero)
+    }));
+  });
+
+  const numerosEpisodios = Object.keys(currentEpisodesData || {})
+    .filter(function (chave) {
+      return Array.isArray(currentEpisodesData[chave]) && currentEpisodesData[chave].length > 0;
+    })
+    .map(Number)
+    .filter(function (numero) { return Number.isFinite(numero); });
+
+  numerosEpisodios.forEach(function (numero) {
+    if (!mapa.has(numero)) {
+      mapa.set(numero, { season_number: numero, name: "Temporada " + numero });
+    }
+  });
+
+  return Array.from(mapa.values()).sort(function (a, b) {
+    return Number(a.season_number) - Number(b.season_number);
+  });
+}
+
+function renderizarEpisodios(numeroTemporada) {
+  const grade = $("#episodesGrid");
+  if (!grade) return;
+  grade.innerHTML = "";
+  const episodios = obterEpisodiosTemporada(numeroTemporada);
+  if (!episodios.length) {
+    const aviso = document.createElement("div");
+    aviso.className = "serie-message";
+    aviso.innerHTML = "<strong>Nenhum episódio nesta temporada</strong>Escolha outra temporada no seletor acima.";
+    grade.appendChild(aviso);
+    return;
+  }
+
+  episodios.forEach(function (episodio, indice) {
+    const numero = episodio.episode_num != null ? episodio.episode_num : indice + 1;
+    const titulo = episodio.title || episodio.name || ("Episódio " + numero);
+    const info = episodio.info && typeof episodio.info === "object" ? episodio.info : {};
+    const imagemEpisodio = valorImagem(info.movie_image) || valorImagem(info.cover_big) || valorImagem(info.cover) || valorImagem(currentItem && currentItem.cover);
+    const idEpisodio = String(episodio.id != null ? episodio.id : (episodio.episode_id != null ? episodio.episode_id : ""));
+
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "episode-card";
+    card.dataset.episodeKey = idEpisodio || (numeroTemporada + "-" + indice);
+    if (currentEpisode && String(currentEpisode.id != null ? currentEpisode.id : currentEpisode.episode_id) === idEpisodio) {
+      card.classList.add("ativo");
+    }
+    card.setAttribute("aria-label", "Assistir temporada " + numeroTemporada + ", episódio " + numero + ": " + titulo);
+
+    const thumb = document.createElement("div");
+    thumb.className = "episode-thumb";
+    if (imagemEpisodio) {
+      thumb.classList.add("tem-foto");
+      const img = document.createElement("img");
+      img.src = imagemEpisodio;
+      prepararImagem(img, "");
+      thumb.appendChild(img);
+    }
+    const numeroEl = document.createElement("span");
+    numeroEl.className = "ep-num";
+    numeroEl.textContent = "EP " + numero;
+    thumb.appendChild(numeroEl);
+
+    const infoEl = document.createElement("div");
+    infoEl.className = "episode-info";
+    const rotulo = document.createElement("span");
+    rotulo.className = "episode-label";
+    rotulo.textContent = "T" + numeroTemporada + " • EPISÓDIO " + numero;
+    const tituloEl = document.createElement("span");
+    tituloEl.className = "episode-title";
+    tituloEl.textContent = titulo;
+    const duracao = info.duration || episodio.duration || "";
+    infoEl.appendChild(rotulo);
+    infoEl.appendChild(tituloEl);
+    if (duracao) {
+      const duracaoEl = document.createElement("span");
+      duracaoEl.className = "episode-duration";
+      duracaoEl.textContent = duracao;
+      infoEl.appendChild(duracaoEl);
+    }
+
+    card.appendChild(thumb);
+    card.appendChild(infoEl);
+    card.addEventListener("click", function () {
+      reproduzirEpisodio(numeroTemporada, indice, true);
+    });
+    grade.appendChild(card);
+  });
+}
+
+function mudarTemporada(valor) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return;
+  renderizarEpisodios(numero);
+}
+
+function reproduzirEpisodio(numeroTemporada, indice, rolar) {
+  const episodios = obterEpisodiosTemporada(numeroTemporada);
+  const episodio = episodios[indice];
+  if (!episodio) return;
+  const idEpisodio = episodio.id != null ? episodio.id : episodio.episode_id;
+  if (idEpisodio == null) {
+    exibirToast("Este episódio não possui um stream válido.");
+    return;
+  }
+  const numero = episodio.episode_num != null ? episodio.episode_num : indice + 1;
+  const titulo = episodio.title || episodio.name || ("Episódio " + numero);
+  currentEpisode = episodio;
+  const stream = urlDoEpisodio(episodio);
+  definirStream(stream, "serie");
+
+  const atual = $("#episodioAtual");
+  if (atual) {
+    atual.textContent = "T" + numeroTemporada + " • E" + numero + " — " + titulo;
+    atual.classList.remove("hidden");
+  }
+  $$(".episode-card").forEach(function (card) {
+    card.classList.toggle("ativo", card.dataset.episodeKey === String(idEpisodio));
+  });
+  if (currentSerieName) document.title = currentSerieName + " • T" + numeroTemporada + "E" + numero + " — HMS-TV";
+
+  if (currentItem) {
+    const registro = Object.assign({}, currentItem, {
+      tipo: "serie",
+      ultimoEpisodio: {
+        temporada: numeroTemporada,
+        episodio: numero,
+        titulo: titulo,
+        id: idEpisodio
+      }
+    });
+    salvarAssistido(registro);
+  }
+
+  if (rolar) {
+    const shell = $("#playerShell");
+    if (shell) shell.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+async function carregarSerieDetalhes(item) {
+  const area = $("#serieArea");
+  if (!area) return;
+  const serieId = item.series_id != null ? item.series_id : item.id;
+  currentSerieId = serieId;
+  currentSerieName = String(item.name || "Série");
+  currentEpisodesData = {};
+  currentSeasons = [];
+  currentEpisode = null;
+
+  try {
+    const dados = await fetchJson(apiUrl("get_series_info", { series_id: serieId }));
+    if (!area || !document.body.contains(area) || currentTipo !== "serie" || String(currentSerieId) !== String(serieId)) return;
+    if (!dados || typeof dados !== "object") throw new Error("Sem dados");
+
+    if (Array.isArray(dados.episodes)) {
+      currentEpisodesData = { 1: dados.episodes };
+    } else if (dados.episodes && typeof dados.episodes === "object") {
+      currentEpisodesData = dados.episodes;
+    } else {
+      currentEpisodesData = {};
+    }
+
+    const info = dados.info && typeof dados.info === "object" ? dados.info : {};
+    atualizarDescricaoSerie(info.plot || info.description || item.plot || "");
+    currentSeasons = montarTemporadas(dados);
+
+    let totalEpisodios = 0;
+    currentSeasons.forEach(function (temporada) {
+      totalEpisodios += obterEpisodiosTemporada(temporada.season_number).length;
+    });
+
+    if (!totalEpisodios) {
+      area.innerHTML =
+        '<div class="serie-message"><strong>Série sem episódios disponíveis</strong>' +
+        'Não encontramos episódios para esta série. Tente novamente mais tarde ou escolha outro título.</div>';
+      mostrarFeedbackPlayer("Série sem episódios", "Este título não possui episódios disponíveis para reprodução.", false, "📭");
+      return;
+    }
+
+    const primeiraTemporada = currentSeasons.find(function (temporada) {
+      return obterEpisodiosTemporada(temporada.season_number).length > 0;
+    }) || currentSeasons[0];
+
+    const opcoes = currentSeasons.map(function (temporada) {
+      return '<option value="' + esc(temporada.season_number) + '">' + esc(temporada.name) + "</option>";
+    }).join("");
+
+    area.innerHTML =
+      '<div class="serie-toolbar">' +
+        '<h2>Episódios</h2>' +
+        '<div class="season-picker">' +
+          '<label for="seletorTemporada">Temporada</label>' +
+          '<select id="seletorTemporada" class="season-select" onchange="mudarTemporada(this.value)">' + opcoes + '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div id="episodesGrid" class="episodes-grid"></div>';
+
+    const seletor = $("#seletorTemporada");
+    if (seletor && primeiraTemporada) seletor.value = String(primeiraTemporada.season_number);
+    if (primeiraTemporada) {
+      renderizarEpisodios(primeiraTemporada.season_number);
+      reproduzirEpisodio(primeiraTemporada.season_number, 0, false);
+    }
+  } catch (erro) {
+    if (!area || !document.body.contains(area) || String(currentSerieId) !== String(serieId)) return;
+    area.innerHTML =
+      '<div class="serie-message"><strong>Não foi possível carregar a série</strong>' +
+      'Ocorreu um erro ao buscar os episódios. Verifique sua conexão e tente novamente.' +
+      '<br><button class="retry-serie" type="button">Tentar novamente</button></div>';
+    const tentar = area.querySelector(".retry-serie");
+    if (tentar) {
+      tentar.addEventListener("click", function () {
+        area.innerHTML = '<div class="loading-inline"><span class="spinner"></span>Carregando episódios...</div>';
+        carregarSerieDetalhes(item);
+      });
+    }
+    mostrarFeedbackPlayer("Série indisponível", "Não foi possível carregar os episódios desta série.", false, "⚠️");
+  }
+}
+
+/* ---------- Sessao / inicializacao ---------- */
+function logout() {
+  fecharMenu();
+  limparIntervaloSlideshow();
+  cancelarCliquePendente();
+  clearTimeout(searchDebounce);
+  searchDebounce = null;
+  pararVideoAtual();
+  buscaAtiva = false;
+
+  try { localStorage.clear(); } catch (erro) {}
+  favoritosCache = null;
+
+  todosFilmes = [];
+  todosSeries = [];
+  todosCanais = [];
+  categoriasFilmes = [];
+  categoriasSeries = [];
+  categoriasCanais = [];
+  activeServerUrl = "";
+  activeUser = "";
+  activePass = "";
+  streamBaseFilmes = "";
+  streamBaseSeries = "";
+  streamBaseCanais = "";
+  currentItem = null;
+  currentTipo = "";
+  currentStreamUrl = "";
+  currentSerieId = null;
+  currentSerieName = "";
+  currentEpisodesData = {};
+  currentSeasons = [];
+  currentEpisode = null;
+  slideshowItems = [];
+
+  const home = $("#homeView");
+  const dinamica = $("#dynamicView");
+  const slideshow = $("#slideshow");
+  if (home) home.classList.remove("hidden");
+  if (dinamica) {
+    dinamica.innerHTML = "";
+    dinamica.classList.add("hidden");
+  }
+  if (slideshow) slideshow.classList.add("hidden");
+  const busca = $("#buscaGlobal");
+  if (busca) busca.value = "";
+  const app = $("#appScreen");
+  const telaLogin = $("#loginScreen");
+  if (app) app.classList.add("hidden");
+  if (telaLogin) telaLogin.classList.remove("hidden");
+
+  ["urlServidor", "usuario", "senha"].forEach(function (id) {
+    const campo = document.getElementById(id);
+    if (campo) campo.value = "";
+  });
+  const lembrar = $("#lembrarLogin");
+  if (lembrar) lembrar.checked = false;
+  const botao = $("#btnEntrar");
+  if (botao) {
+    botao.disabled = false;
+    botao.textContent = "Entrar";
+  }
+  document.title = "HMS-TV — IPTV e Vida";
+  window.scrollTo({ top: 0, behavior: "auto" });
+  if (document.fullscreenElement && document.exitFullscreen) {
+    try {
+      const saida = document.exitFullscreen();
+      if (saida && typeof saida.catch === "function") saida.catch(function () {});
+    } catch (erro) {}
+  }
+  const url = $("#urlServidor");
+  if (url) setTimeout(function () { url.focus(); }, 60);
+}
+
+function inicializar() {
+  const form = $("#loginForm");
+  if (form) form.addEventListener("submit", entrar);
+  preencherLoginSalvo();
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") fecharMenu();
+  });
+  window.addEventListener("storage", function (event) {
+    if (event.key === "favoritos" || event.key === null) favoritosCache = null;
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", inicializar);
+} else {
+  inicializar();
+}
+</script>
+</body>
+</html>
