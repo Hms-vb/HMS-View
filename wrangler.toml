@@ -1,0 +1,10 @@
+name = "hms-tv"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "."
+
+# Cloudflare Pages Functions:
+#   functions/api/proxy.js  ->  /api/proxy
+#
+# Opcional (defina em Settings > Variables and Secrets):
+#   ALLOWED_HOSTS   = "meuservidor.com,*.meuprovedor.com"
+#   ALLOWED_ORIGINS = "https://hms-tv.pages.dev"

@@ -16,13 +16,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-<!-- HLS.js Streaming Engine for M3U8 Live Channels -->
-<script src="/hls.min.js"></script>
+<!-- HLS.js (M3U8) + mpegts.js (canais .ts). CDN com fallback local. -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script>
   if (typeof Hls === "undefined") {
     var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
+    s.src = "hls.min.js";
     document.head.appendChild(s);
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js"></script>
+<script>
+  if (typeof mpegts === "undefined") {
+    var ms = document.createElement("script");
+    ms.src = "mpegts.min.js";
+    document.head.appendChild(ms);
   }
 </script>
 
@@ -385,6 +393,115 @@ img {
 
 .login-footnote strong {
   color: #cfcfcf;
+}
+
+/* ========================================================
+   CONEXÃO / PROXY (Cloudflare) E ARQUIVO M3U
+   ======================================================== */
+.form-hint {
+  margin: 7px 2px 0;
+  color: var(--text-sub);
+  font-size: 0.71rem;
+  line-height: 1.45;
+}
+
+.form-group select {
+  display: block;
+  width: 100%;
+  padding: 15px 40px 15px 16px;
+  color: #ffffff;
+  background-color: #333333;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #ffffff 50%),
+    linear-gradient(135deg, #ffffff 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.form-group select:focus {
+  border-color: #ffffff;
+  background-color: #404040;
+  box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.35);
+}
+
+.form-group input[type="file"] {
+  padding: 11px 12px;
+  color: #cfcfcf;
+  background: #262626;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.form-group input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: #3a3a3a;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.connection-config {
+  margin: 2px 0 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.connection-config summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  color: #cfcfcf;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.connection-config summary::-webkit-details-marker {
+  display: none;
+}
+
+.connection-config summary::after {
+  content: "▾";
+  margin-left: auto;
+  color: #8c8c8c;
+  transition: transform 0.2s;
+}
+
+.connection-config[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.connection-config-body {
+  padding: 4px 14px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.connection-config-body .form-group {
+  margin: 14px 0 0;
+}
+
+.connection-config-body label {
+  font-size: 0.73rem;
 }
 
 
@@ -1158,6 +1275,35 @@ img {
 
 .media-grid .media-card:hover {
   transform: translateY(-6px) scale(1.05);
+}
+
+.grid-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 28px 0 4px;
+}
+
+.btn-load-more {
+  min-width: 220px;
+  padding: 12px 28px;
+  border: 1px solid rgba(229, 9, 20, 0.55);
+  border-radius: 30px;
+  background: rgba(229, 9, 20, 0.12);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.btn-load-more:hover {
+  background: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 6px 20px var(--red-glow);
+}
+
+.btn-load-more:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
 }
 
 .empty-state {
@@ -1994,6 +2140,11 @@ img {
         <label id="lblUrl" for="urlServidor">URL do Servidor IPTV</label>
         <input id="urlServidor" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="http://servidor.com:8080" aria-label="URL do servidor">
       </div>
+      <div id="m3uFileRow" class="form-group hidden">
+        <label for="arquivoM3u">Ou selecione um arquivo .m3u do dispositivo</label>
+        <input id="arquivoM3u" type="file" accept=".m3u,.m3u8,text/plain,audio/x-mpegurl,application/vnd.apple.mpegurl" aria-label="Selecionar arquivo de lista M3U">
+        <p id="m3uFileHint" class="form-hint">Dica: se a URL da lista não abrir por bloqueio de CORS, baixe o arquivo .m3u e selecione-o aqui. Ele é lido direto no navegador.</p>
+      </div>
       <div id="camposCredenciais">
         <div class="form-group">
           <label for="usuario">Usuário</label>
@@ -2004,6 +2155,24 @@ img {
           <input id="senha" type="password" autocomplete="current-password" placeholder="Sua senha" aria-label="Senha">
         </div>
       </div>
+      <details class="connection-config" id="connectionConfig">
+        <summary>⚙️ Conexão / Proxy (Cloudflare)</summary>
+        <div class="connection-config-body">
+          <div class="form-group">
+            <label for="proxyMode">Modo de conexão</label>
+            <select id="proxyMode" aria-label="Modo de conexão">
+              <option value="auto">Automático (recomendado)</option>
+              <option value="on">Sempre usar proxy</option>
+              <option value="off">Nunca usar proxy (conexão direta)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="proxyCustomUrl">Proxy personalizado (opcional)</label>
+            <input id="proxyCustomUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://seu-projeto.pages.dev/api/proxy?url=" aria-label="URL do proxy personalizado">
+            <p class="form-hint">Em branco = usa o proxy <strong>/api/proxy</strong> do próprio site. Ao abrir o HTML como arquivo local, informe um Worker/Pages publicado ou use o arquivo .m3u.</p>
+          </div>
+        </div>
+      </details>
       <label class="remember-row" for="lembrarLogin">
         <input id="lembrarLogin" type="checkbox">
         <span class="checkbox-custom" aria-hidden="true"></span>
@@ -2131,6 +2300,15 @@ let streamBaseSeries = "";
 let streamBaseCanais = "";
 let modoLoginAtual = "xtream";
 let hlsInstance = null;
+let mpegtsInstance = null;
+let modoProxy = "auto";
+let proxyPersonalizado = "";
+let arquivoM3uSelecionado = null;
+let streamTentouDireto = false;
+let currentStreamOriginal = "";
+let streamGeneration = 0;
+let hlsLoadPromise = null;
+let mpegtsLoadPromise = null;
 
 let favoritosCache = null;
 let currentItem = null;
@@ -2154,6 +2332,7 @@ let searchDebounce = null;
 let buscaAtiva = false;
 let toastTimer = null;
 let loginEmAndamento = false;
+let observadoresGrade = [];
 
 /* ---------- Utilitarios de Seguranca e URLs ---------- */
 const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
@@ -2166,21 +2345,152 @@ function sanitizarUrl(url) {
     .replace(/(\/(?:movie|series|live)\/[^\/]+\/)[^\/]+/gi, "$1******");
 }
 
-function resolverUrlProxy(url) {
-  if (!url) return "";
-  // Se ja for uma URL do proxy ou relativa local, mantenha
-  if (url.startsWith("/api/proxy") || url.startsWith("./") || (url.startsWith("/") && !url.startsWith("//"))) {
-    return url;
-  }
-  // No Cloudflare Pages, Netlify ou ambiente HTTPS, ou quando a URL for HTTP:
-  const isHttps = window.location.protocol === "https:";
-  const isTargetHttp = /^http:\/\//i.test(url);
-  const isCloudHost = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+/* ---------- Configuração de proxy / CORS ---------- */
+function estaEmArquivoLocal() {
+  return window.location.protocol === "file:";
+}
 
-  if (isHttps || isTargetHttp || isCloudHost) {
-    return "/api/proxy?url=" + encodeURIComponent(url);
+function hostLocal() {
+  return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+}
+
+function baseProxyDoSite() {
+  if (estaEmArquivoLocal()) return "";
+  return new URL("/api/proxy", window.location.origin).href;
+}
+
+function obterProxyBase() {
+  const custom = String(proxyPersonalizado || "").trim();
+  return custom || baseProxyDoSite();
+}
+
+function montarUrlProxy(proxyBase, urlAlvo) {
+  const base = String(proxyBase || "").trim();
+  const alvo = String(urlAlvo || "").trim();
+  if (!base || !alvo) return "";
+  if (base.includes("{url}")) return base.replace(/\{url\}/g, encodeURIComponent(alvo));
+  if (base.endsWith("=") || base.endsWith("/")) return base + encodeURIComponent(alvo);
+  if (base.endsWith("?") || base.endsWith("&")) return base + "url=" + encodeURIComponent(alvo);
+  if (base.includes("?")) return base + "&url=" + encodeURIComponent(alvo);
+  return base + "?url=" + encodeURIComponent(alvo);
+}
+
+function deveUsarProxy() {
+  if (modoProxy === "off") return false;
+  if (modoProxy === "on") return true;
+  if (proxyPersonalizado) return true;
+  if (estaEmArquivoLocal()) return false;
+  return window.location.protocol === "https:" || (!!window.location.hostname && !hostLocal());
+}
+
+function resolverUrlProxy(url, forcarDireto) {
+  if (!url) return "";
+  const valor = String(url).trim();
+  if (!valor) return "";
+  if (/^(data:|blob:)/i.test(valor)) return valor;
+  if (valor.startsWith("/api/proxy")) return valor;
+  if (valor.startsWith("./") || (valor.startsWith("/") && !valor.startsWith("//"))) return valor;
+  if (forcarDireto || !deveUsarProxy()) return valor;
+  const proxy = obterProxyBase();
+  if (!proxy) return valor;
+  return montarUrlProxy(proxy, valor);
+}
+
+function urlDiretaPermitida(url) {
+  if (window.location.protocol === "https:" && /^http:\/\//i.test(url)) return false;
+  return true;
+}
+
+function candidatosDeBusca(url) {
+  const lista = [];
+  const vistos = new Set();
+  function adicionar(endereco, rotulo) {
+    if (!endereco || vistos.has(endereco)) return;
+    vistos.add(endereco);
+    lista.push({ url: endereco, rotulo: rotulo });
   }
-  return url;
+
+  const proxy = obterProxyBase();
+  const temProxy = Boolean(proxy) && modoProxy !== "off";
+  const preferirDireto = estaEmArquivoLocal() || hostLocal();
+  const preferirProxy = modoProxy === "on" || (!preferirDireto && modoProxy !== "off");
+
+  if (temProxy && preferirProxy) adicionar(montarUrlProxy(proxy, url), "proxy");
+  if (urlDiretaPermitida(url)) adicionar(url, "direto");
+  if (temProxy && !preferirProxy) adicionar(montarUrlProxy(proxy, url), "proxy");
+
+  // Proxies públicos gratuitos: último recurso quando o servidor IPTV não libera CORS.
+  adicionar("https://api.allorigins.win/raw?url=" + encodeURIComponent(url), "allorigins");
+  adicionar("https://corsproxy.io/?url=" + encodeURIComponent(url), "corsproxy");
+  adicionar("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url), "codetabs");
+  return lista;
+}
+
+async function fetchTextoSeguro(url, opcoes) {
+  const config = opcoes || {};
+  const tentativas = candidatosDeBusca(url);
+  let ultimoStatus = 0;
+  let ultimoErro = null;
+  let erroProxy = "";
+
+  for (let i = 0; i < tentativas.length; i += 1) {
+    const tentativa = tentativas[i];
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const limite = (tentativa.rotulo === "direto" || tentativa.rotulo === "proxy")
+      ? (config.timeout || 18000)
+      : (config.timeoutPublico || 9000);
+    const timer = controller ? setTimeout(function () { controller.abort(); }, limite) : null;
+
+    try {
+      const resposta = await fetch(tentativa.url, {
+        cache: "no-store",
+        signal: controller ? controller.signal : undefined
+      });
+
+      if (!resposta.ok) {
+        ultimoStatus = resposta.status;
+        let detalhe = "";
+        try {
+          const textoErro = await resposta.text();
+          if (textoErro && textoErro.length < 600) detalhe = textoErro;
+        } catch (erroLeitura) {}
+        if (tentativa.rotulo === "proxy" && detalhe) {
+          try {
+            const json = JSON.parse(detalhe);
+            if (json && json.details) erroProxy = String(json.details);
+            else if (json && json.error) erroProxy = String(json.error);
+          } catch (erroJson) {
+            erroProxy = detalhe;
+          }
+        }
+        throw new Error("HTTP_" + resposta.status);
+      }
+
+      const texto = await resposta.text();
+      if (!texto || !texto.trim()) throw new Error("RESPOSTA_VAZIA");
+      if (tentativa.rotulo === "proxy" && /^\s*<!DOCTYPE html|<html[\s>]/i.test(texto)) {
+        throw new Error("PROXY_NAO_PUBLICADO");
+      }
+      return { texto: texto, via: tentativa.rotulo };
+    } catch (erro) {
+      ultimoErro = erro;
+      console.warn("Falha ao buscar (" + tentativa.rotulo + "):", sanitizarUrl(url), erro && erro.message ? erro.message : erro);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  if (ultimoStatus === 401 || ultimoStatus === 403) {
+    const erroAuth = new Error("AUTH");
+    erroAuth.detalheProxy = erroProxy;
+    throw erroAuth;
+  }
+  if (ultimoStatus === 404) throw new Error("NOT_FOUND");
+  if (ultimoStatus >= 500) throw new Error("SERVER_ERROR_" + ultimoStatus);
+  const erroRede = new Error("NETWORK_ERROR");
+  erroRede.detalheProxy = erroProxy;
+  erroRede.causa = ultimoErro;
+  throw erroRede;
 }
 
 function alternarModoLogin(modo) {
@@ -2188,6 +2498,7 @@ function alternarModoLogin(modo) {
   const tabX = $("#tabXtream");
   const tabM = $("#tabM3u");
   const camposCred = $("#camposCredenciais");
+  const fileRow = $("#m3uFileRow");
   const lblUrl = $("#lblUrl");
   const campoUrl = $("#urlServidor");
 
@@ -2202,81 +2513,254 @@ function alternarModoLogin(modo) {
 
   if (modo === "m3u") {
     if (camposCred) camposCred.classList.add("hidden");
+    if (fileRow) fileRow.classList.remove("hidden");
     if (lblUrl) lblUrl.textContent = "URL da Lista M3U / M3U8";
     if (campoUrl) campoUrl.placeholder = "http://servidor.com:8080/get.php?username=...&type=m3u_plus";
   } else {
     if (camposCred) camposCred.classList.remove("hidden");
+    if (fileRow) fileRow.classList.add("hidden");
     if (lblUrl) lblUrl.textContent = "URL do Servidor IPTV";
     if (campoUrl) campoUrl.placeholder = "http://servidor.com:8080";
   }
 }
 
-function parsearM3u(texto) {
-  const linhas = String(texto || "").split(/\r?\n/);
+function resolverUrlRelativa(url, base) {
+  const valor = String(url || "").trim();
+  if (!valor) return "";
+  if (/^(https?:|rtmp:|rtsp:|udp:|rtp:)/i.test(valor)) return valor;
+  if (!base) return valor;
+  try { return new URL(valor, base).href; } catch (erro) { return valor; }
+}
+
+function separarExtinf(linha) {
+  const prefixo = String(linha || "").replace(/^#EXTINF:/i, "");
+  let dentroAspas = false;
+  let aspas = "";
+  for (let i = 0; i < prefixo.length; i += 1) {
+    const caractere = prefixo.charAt(i);
+    if (caractere === '"' || caractere === "'") {
+      if (!dentroAspas) {
+        dentroAspas = true;
+        aspas = caractere;
+      } else if (caractere === aspas) {
+        dentroAspas = false;
+        aspas = "";
+      }
+    } else if (caractere === "," && !dentroAspas) {
+      return { atributos: prefixo.slice(0, i), nome: prefixo.slice(i + 1).trim() };
+    }
+  }
+  return { atributos: prefixo, nome: "" };
+}
+
+function extrairAtributosExtinf(texto) {
+  const atributos = {};
+  const regex = /([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s]+))/g;
+  let encontrado;
+  while ((encontrado = regex.exec(String(texto || ""))) !== null) {
+    const valor = encontrado[2] !== undefined ? encontrado[2] : (encontrado[3] !== undefined ? encontrado[3] : encontrado[4]);
+    atributos[encontrado[1].toLowerCase()] = valor;
+  }
+  return atributos;
+}
+
+function limparNomeSerie(nome) {
+  return String(nome || "")
+    .replace(/[\s._\-–—]+$/g, "")
+    .replace(/^[\s._\-–—]+/g, "")
+    .replace(/\s*[\[\(]\s*(?:HD|SD|FHD|UHD|4K|DUBLADO|LEGENDADO|PT-BR)\s*[\]\)]\s*$/i, "")
+    .trim() || "Série";
+}
+
+function extrairInfoEpisodio(nome) {
+  const texto = String(nome || "").trim();
+  let encontrado;
+
+  encontrado = texto.match(/^(.*?)[\s._\-–—]*[\(\[]?\s*(?:S|T)\s*(\d{1,2})\s*[\s._\-–—]*(?:E|EP|X)\s*(\d{1,3})\b/i);
+  if (encontrado) {
+    return { serie: limparNomeSerie(encontrado[1]), temporada: parseInt(encontrado[2], 10) || 1, episodio: parseInt(encontrado[3], 10) || 1 };
+  }
+
+  encontrado = texto.match(/^(.*?)[\s._\-–—]*(\d{1,2})\s*x\s*(\d{1,3})\b/i);
+  if (encontrado) {
+    return { serie: limparNomeSerie(encontrado[1]), temporada: parseInt(encontrado[2], 10) || 1, episodio: parseInt(encontrado[3], 10) || 1 };
+  }
+
+  encontrado = texto.match(/^(.*?)[\s._\-–—]*(?:temporada|season)\s*(\d{1,2})[\s._\-–—]*(?:epis[oó]dio|episodio|ep|e)\s*(\d{1,3})\b/i);
+  if (encontrado) {
+    return { serie: limparNomeSerie(encontrado[1]), temporada: parseInt(encontrado[2], 10) || 1, episodio: parseInt(encontrado[3], 10) || 1 };
+  }
+
+  encontrado = texto.match(/^(.*?)[\s._\-–—]*(?:epis[oó]dio|episodio|ep)\s*(\d{1,3})\b/i);
+  if (encontrado && encontrado[1] && encontrado[1].trim().length > 1) {
+    return { serie: limparNomeSerie(encontrado[1]), temporada: 1, episodio: parseInt(encontrado[2], 10) || 1 };
+  }
+
+  return null;
+}
+
+function extensaoDoStream(url) {
+  const encontrado = String(url || "").match(/\.([a-z0-9]{2,5})(?:\?|#|$)/i);
+  return encontrado ? encontrado[1].toLowerCase() : "";
+}
+
+function criarEpisodioM3u(item, info, indice) {
+  return {
+    id: item.stream_id || ("m3u_ep_" + indice),
+    episode_num: info.episodio,
+    season: info.temporada,
+    title: item.name,
+    direct_source: item.direct_source,
+    container_extension: extensaoDoStream(item.direct_source),
+    info: {
+      movie_image: item.stream_icon || "",
+      duration: ""
+    }
+  };
+}
+
+function agruparSeriesM3u(itens) {
+  const mapa = new Map();
+  const semEpisodio = [];
+  const lista = Array.isArray(itens) ? itens : [];
+
+  lista.forEach(function (item, indice) {
+    const info = extrairInfoEpisodio(item.name);
+    if (!info) {
+      semEpisodio.push(item);
+      return;
+    }
+
+    const chave = normalizarTexto(info.serie) + "|" + (item.category_id || "");
+    let serie = mapa.get(chave);
+    if (!serie) {
+      serie = {
+        series_id: "m3u_serie_" + (mapa.size + 1) + "_" + indice,
+        name: info.serie,
+        stream_icon: item.stream_icon || "",
+        category_name: item.category_name,
+        category_id: item.category_id,
+        plot: "",
+        _m3u: true,
+        _episodesPorTemporada: {}
+      };
+      mapa.set(chave, serie);
+    }
+    if (!serie.stream_icon && item.stream_icon) serie.stream_icon = item.stream_icon;
+    const temporada = info.temporada;
+    if (!serie._episodesPorTemporada[temporada]) serie._episodesPorTemporada[temporada] = [];
+    serie._episodesPorTemporada[temporada].push(criarEpisodioM3u(item, info, indice));
+  });
+
+  semEpisodio.forEach(function (item, indice) {
+    const chave = normalizarTexto(item.name) + "|" + (item.category_id || "");
+    if (mapa.has(chave)) return;
+    mapa.set(chave, {
+      series_id: "m3u_serie_unica_" + (mapa.size + 1) + "_" + indice,
+      name: item.name,
+      stream_icon: item.stream_icon || "",
+      category_name: item.category_name,
+      category_id: item.category_id,
+      plot: "",
+      _m3u: true,
+      _episodesPorTemporada: {
+        1: [criarEpisodioM3u(item, { temporada: 1, episodio: 1 }, indice)]
+      }
+    });
+  });
+
+  const series = Array.from(mapa.values());
+  series.forEach(function (serie) {
+    Object.keys(serie._episodesPorTemporada).forEach(function (temporada) {
+      serie._episodesPorTemporada[temporada].sort(function (a, b) {
+        return Number(a.episode_num) - Number(b.episode_num);
+      });
+    });
+  });
+  return series.sort(function (a, b) {
+    return String(a.name).localeCompare(String(b.name), "pt-BR");
+  });
+}
+
+function parsearM3u(texto, urlBase) {
+  const linhas = String(texto || "").replace(/^\uFEFF/, "").split(/\r?\n/);
   const canais = [];
   const filmes = [];
-  const series = [];
+  const seriesBrutas = [];
   let metaAtual = null;
+  let grupoExtra = "";
 
-  for (let i = 0; i < linhas.length; i++) {
+  for (let i = 0; i < linhas.length; i += 1) {
     const linha = linhas[i].trim();
     if (!linha) continue;
 
-    if (linha.startsWith("#EXTINF:")) {
-      const matchTvgId = linha.match(/tvg-id="([^"]*)"/i);
-      const matchTvgName = linha.match(/tvg-name="([^"]*)"/i);
-      const matchLogo = linha.match(/tvg-logo="([^"]*)"/i);
-      const matchGroup = linha.match(/group-title="([^"]*)"/i);
-      const virgulaIndex = linha.lastIndexOf(",");
-      const nome = virgulaIndex !== -1 ? linha.substring(virgulaIndex + 1).trim() : (matchTvgName ? matchTvgName[1] : "Sem título");
-      const categoria = matchGroup && matchGroup[1].trim() ? matchGroup[1].trim() : "Geral";
-
+    if (/^#EXTINF:/i.test(linha)) {
+      const partes = separarExtinf(linha);
+      const atributos = extrairAtributosExtinf(partes.atributos);
+      const nome = partes.nome || atributos["tvg-name"] || "Sem título";
+      const categoria = String(atributos["group-title"] || grupoExtra || "Geral").trim() || "Geral";
       metaAtual = {
         name: nome,
         stream_id: "m3u_" + (i + 1),
-        stream_icon: matchLogo ? matchLogo[1] : "",
+        stream_icon: atributos["tvg-logo"] || "",
         category_name: categoria,
         category_id: normalizarTexto(categoria) || "geral",
-        tvg_id: matchTvgId ? matchTvgId[1] : "",
+        tvg_id: atributos["tvg-id"] || ""
       };
+      grupoExtra = "";
       continue;
     }
 
-    if (!linha.startsWith("#") && metaAtual) {
-      const streamUrl = linha;
-      const lower = streamUrl.toLowerCase();
-      const normGroup = normalizarTexto(metaAtual.category_name || "");
-      const item = Object.assign({}, metaAtual, {
-        direct_source: streamUrl,
-        stream_url: streamUrl
-      });
-
-      if (
-        lower.includes("/series/") ||
-        normGroup.includes("serie") ||
-        normGroup.includes("temporada")
-      ) {
-        item._tipo = "serie";
-        series.push(item);
-      } else if (
-        lower.includes("/movie/") ||
-        lower.endsWith(".mp4") ||
-        lower.endsWith(".mkv") ||
-        normGroup.includes("filme") ||
-        normGroup.includes("vod") ||
-        normGroup.includes("movie")
-      ) {
-        item._tipo = "filme";
-        filmes.push(item);
-      } else {
-        item._tipo = "canal";
-        canais.push(item);
+    if (/^#EXTGRP:/i.test(linha)) {
+      grupoExtra = linha.replace(/^#EXTGRP:/i, "").trim();
+      if (metaAtual && grupoExtra) {
+        metaAtual.category_name = grupoExtra;
+        metaAtual.category_id = normalizarTexto(grupoExtra) || metaAtual.category_id;
       }
-      metaAtual = null;
+      continue;
     }
+
+    if (linha.startsWith("#") || !metaAtual) continue;
+
+    const streamUrl = resolverUrlRelativa(linha, urlBase);
+    if (!streamUrl) {
+      metaAtual = null;
+      continue;
+    }
+
+    const lower = streamUrl.toLowerCase();
+    const normGroup = normalizarTexto(metaAtual.category_name || "");
+    const item = Object.assign({}, metaAtual, {
+      direct_source: streamUrl,
+      stream_url: streamUrl
+    });
+
+    const pareceSerie =
+      lower.includes("/series/") ||
+      normGroup.includes("serie") ||
+      normGroup.includes("temporada") ||
+      Boolean(extrairInfoEpisodio(metaAtual.name));
+
+    if (pareceSerie) {
+      item._tipo = "serie";
+      seriesBrutas.push(item);
+    } else if (
+      lower.includes("/movie/") ||
+      /\.(mp4|mkv|avi|mov|wmv|flv|webm)(\?|$)/i.test(lower) ||
+      normGroup.includes("filme") ||
+      normGroup.includes("vod") ||
+      normGroup.includes("movie")
+    ) {
+      item._tipo = "filme";
+      filmes.push(item);
+    } else {
+      item._tipo = "canal";
+      canais.push(item);
+    }
+    metaAtual = null;
   }
 
-  return { canais, filmes, series };
+  return { canais: canais, filmes: filmes, series: agruparSeriesM3u(seriesBrutas) };
 }
 
 function storageGet(chave, padrao = null) {
@@ -2350,48 +2834,34 @@ function apiUrl(acao, parametros) {
 }
 
 async function fetchJson(url) {
-  const urlFinal = resolverUrlProxy(url);
-  let resposta;
-  try {
-    resposta = await fetch(urlFinal, {
-      cache: "no-store",
-      headers: {
-        "Accept": "application/json, text/plain, */*",
-        "X-HMS-Client": "1"
-      }
-    });
-  } catch (redeErr) {
-    console.error("Falha de rede ao acessar:", sanitizarUrl(url), redeErr);
-    // Se falhar via proxy e for localhost, tenta requisicao direta
-    if (urlFinal !== url) {
-      try {
-        const direto = await fetch(url, { cache: "no-store" });
-        if (direto.ok) return await direto.json();
-      } catch (e) {}
-    }
-    throw new Error("NETWORK_ERROR");
-  }
-
-  if (!resposta.ok) {
-    if (resposta.status === 401 || resposta.status === 403) {
-      try {
-        const errJson = await resposta.json();
-        if (errJson && errJson.details) throw new Error("SECURITY_" + errJson.details);
-      } catch (e) {}
-      throw new Error("AUTH");
-    }
-    if (resposta.status === 404) throw new Error("NOT_FOUND");
-    if (resposta.status >= 500) throw new Error("SERVER_ERROR_" + resposta.status);
-    throw new Error("HTTP_" + resposta.status);
-  }
-
-  const texto = await resposta.text();
+  const resultado = await fetchTextoSeguro(url, { timeout: 18000 });
+  const texto = String(resultado.texto || "").replace(/^\uFEFF/, "");
   try {
     return JSON.parse(texto);
   } catch (err) {
     console.warn("Resposta não é JSON:", sanitizarUrl(url), texto.slice(0, 150));
     throw new Error("INVALID_JSON");
   }
+}
+
+async function fetchPlaylistM3u(url) {
+  const resultado = await fetchTextoSeguro(url, { timeout: 30000, timeoutPublico: 12000 });
+  const texto = String(resultado.texto || "").replace(/^\uFEFF/, "");
+  if (/^\s*<!DOCTYPE html|<html[\s>]/i.test(texto)) throw new Error("M3U_HTML");
+  return texto;
+}
+
+function lerArquivoTexto(arquivo) {
+  return new Promise(function (resolve, reject) {
+    if (!arquivo) {
+      reject(new Error("ARQUIVO_VAZIO"));
+      return;
+    }
+    const leitor = new FileReader();
+    leitor.onload = function () { resolve(String(leitor.result || "")); };
+    leitor.onerror = function () { reject(new Error("ARQUIVO_ERRO")); };
+    leitor.readAsText(arquivo, "UTF-8");
+  });
 }
 
 function idDoItem(item, tipo) {
@@ -2544,6 +3014,15 @@ function pararVideoAtual() {
     } catch (e) {}
     hlsInstance = null;
   }
+  if (mpegtsInstance) {
+    try {
+      mpegtsInstance.pause();
+      mpegtsInstance.unload();
+      mpegtsInstance.detachMediaElement();
+      mpegtsInstance.destroy();
+    } catch (e) {}
+    mpegtsInstance = null;
+  }
   const video = $("#videoPlayer");
   if (video) {
     try { video.pause(); } catch (erro) {}
@@ -2551,6 +3030,7 @@ function pararVideoAtual() {
     try { video.load(); } catch (erro) {}
   }
   currentStreamUrl = "";
+  currentStreamOriginal = "";
   currentEpisode = null;
 }
 
@@ -2583,6 +3063,25 @@ function atualizarMarcadoresFavoritos(item, tipo, ativo) {
   });
 }
 
+function itemParaArmazenamento(item) {
+  if (!item || typeof item !== "object") return item;
+  const copia = Object.assign({}, item);
+  delete copia._episodesPorTemporada;
+  delete copia.episodes;
+  return copia;
+}
+
+function resolverItemCompleto(item, tipo) {
+  if (!item || tipo !== "serie") return item;
+  if (item._m3u && !item._episodesPorTemporada) {
+    const encontrado = todosSeries.find(function (serie) {
+      return String(serie.series_id) === String(item.series_id);
+    });
+    if (encontrado) return encontrado;
+  }
+  return item;
+}
+
 function toggleFavoritoDuploClique(item, event) {
   if (event) {
     event.preventDefault();
@@ -2597,7 +3096,7 @@ function toggleFavoritoDuploClique(item, event) {
   });
   const adicionado = indice < 0;
   if (adicionado) {
-    favoritos.unshift(Object.assign({}, item, { tipo: tipo }));
+    favoritos.unshift(Object.assign({}, itemParaArmazenamento(item), { tipo: tipo }));
     exibirToast("⭐ Adicionado aos favoritos");
   } else {
     favoritos.splice(indice, 1);
@@ -2611,7 +3110,7 @@ function salvarAssistido(item) {
   if (!item || typeof item !== "object") return;
   const tipo = tipoDoItem(item);
   const chave = chaveItem(item, tipo);
-  const registro = Object.assign({}, item, { tipo: tipo });
+  const registro = Object.assign({}, itemParaArmazenamento(item), { tipo: tipo });
   const ultimos = obterUltimos().filter(function (antigo) {
     return chaveItem(antigo, tipoDoItem(antigo)) !== chave;
   });
@@ -2653,7 +3152,77 @@ function nomeCategoria(id, tipo) {
 }
 
 /* ---------- Login ---------- */
+function carregarConfigProxySalva() {
+  modoProxy = storageGet("iptv_proxy_mode", "auto");
+  proxyPersonalizado = storageGet("iptv_custom_proxy", "");
+  const select = $("#proxyMode");
+  const input = $("#proxyCustomUrl");
+  if (select) select.value = modoProxy;
+  if (input) input.value = proxyPersonalizado;
+  atualizarAvisoConexao();
+}
+
+function salvarConfigProxy() {
+  const select = $("#proxyMode");
+  const input = $("#proxyCustomUrl");
+  modoProxy = select ? select.value : "auto";
+  if (modoProxy !== "auto" && modoProxy !== "on" && modoProxy !== "off") modoProxy = "auto";
+  proxyPersonalizado = input ? String(input.value || "").trim() : "";
+  storageSet("iptv_proxy_mode", modoProxy);
+  storageSet("iptv_custom_proxy", proxyPersonalizado);
+  atualizarAvisoConexao();
+}
+
+function atualizarAvisoConexao() {
+  const aviso = $("#cloudProxyNotice");
+  if (!aviso) return;
+  if (estaEmArquivoLocal()) {
+    aviso.innerHTML = '<span style="color: #ffd166; font-weight: 700;">● Modo local (file://):</span> para listas M3U, selecione o arquivo .m3u ou informe um proxy publicado. Canais/filmes HTTP só tocam com um proxy (Cloudflare Pages).';
+  } else if (proxyPersonalizado) {
+    aviso.innerHTML = '<span style="color: #46d369; font-weight: 700;">● Proxy personalizado:</span> ' + esc(proxyPersonalizado.split("?")[0]) + ' — usado para contornar CORS e HTTPS.';
+  } else if (window.location.protocol === "https:") {
+    aviso.innerHTML = '<span style="color: #46d369; font-weight: 700;">● Cloudflare / HTTPS Seguro:</span> proxy <strong>/api/proxy</strong> ativado para listas, filmes e canais ao vivo.';
+  } else {
+    aviso.innerHTML = '<span style="color: #46d369; font-weight: 700;">● Conexão local:</span> tentando conexão direta e proxy automático.';
+  }
+}
+
+function configurarArquivoM3u() {
+  const input = $("#arquivoM3u");
+  if (!input) return;
+  input.addEventListener("change", function () {
+    arquivoM3uSelecionado = input.files && input.files[0] ? input.files[0] : null;
+    const dica = $("#m3uFileHint");
+    if (dica) {
+      dica.textContent = arquivoM3uSelecionado
+        ? "Arquivo selecionado: " + arquivoM3uSelecionado.name + " (será lido direto no navegador)."
+        : "Dica: se a URL da lista não abrir por bloqueio de CORS, baixe o arquivo .m3u e selecione-o aqui. Ele é lido direto no navegador.";
+    }
+  });
+}
+
+function aplicarPlaylistM3u(texto, urlBase) {
+  const resultado = parsearM3u(texto, urlBase);
+  if (!resultado.canais.length && !resultado.filmes.length && !resultado.series.length) {
+    throw new Error("M3U_VAZIO");
+  }
+  todosFilmes = resultado.filmes;
+  todosSeries = resultado.series;
+  todosCanais = resultado.canais;
+  categoriasFilmes = prepararCategorias(todosFilmes, []);
+  categoriasSeries = prepararCategorias(todosSeries, []);
+  categoriasCanais = prepararCategorias(todosCanais, []);
+  activeServerUrl = urlBase || "";
+  activeUser = "";
+  activePass = "";
+  streamBaseFilmes = "";
+  streamBaseSeries = "";
+  streamBaseCanais = "";
+  console.log("Playlist M3U carregada:", resultado.canais.length, "canais,", resultado.filmes.length, "filmes,", resultado.series.length, "séries.");
+}
+
 function preencherLoginSalvo() {
+  carregarConfigProxySalva();
   if (storageGet("iptv_remember") !== "true") return;
   const lembrar = $("#lembrarLogin");
   const url = $("#urlServidor");
@@ -2680,10 +3249,12 @@ async function entrar(event) {
   const senha = campoSenha ? campoSenha.value : "";
   const lembrar = Boolean(campoLembrar && campoLembrar.checked);
 
+  salvarConfigProxy();
+
   const ehM3u = modoLoginAtual === "m3u" || /\.m3u8?(\?|$)/i.test(url) || url.includes("get.php");
 
-  if (!url) {
-    alert("Informe a URL para continuar.");
+  if (!url && !(ehM3u && arquivoM3uSelecionado)) {
+    alert("Informe a URL ou selecione um arquivo .m3u para continuar.");
     return;
   }
 
@@ -2709,39 +3280,23 @@ async function entrar(event) {
   loginEmAndamento = true;
   if (botao) {
     botao.disabled = true;
-    botao.textContent = "Conectando...";
+    botao.textContent = ehM3u && arquivoM3uSelecionado ? "Lendo lista..." : "Conectando...";
   }
 
   try {
     if (ehM3u) {
-      // Modo M3U / M3U8 direto
-      console.log("Iniciando carregamento de playlist M3U:", sanitizarUrl(url));
-      const m3uUrl = resolverUrlProxy(url);
-      const resp = await fetch(m3uUrl, {
-        headers: { "X-HMS-Client": "1" }
-      });
-      if (!resp.ok) {
-        if (resp.status === 401 || resp.status === 403) throw new Error("AUTH");
-        if (resp.status === 404) throw new Error("NOT_FOUND");
-        if (resp.status >= 500) throw new Error("SERVER_ERROR_" + resp.status);
-        throw new Error("HTTP_" + resp.status);
-      }
-      const textoM3u = await resp.text();
-      const resultado = parsearM3u(textoM3u);
+      let textoM3u = "";
+      let baseM3u = url;
 
-      if (!resultado.canais.length && !resultado.filmes.length && !resultado.series.length) {
-        throw new Error("M3U_VAZIO");
+      if (arquivoM3uSelecionado) {
+        console.log("Lendo arquivo M3U local:", arquivoM3uSelecionado.name, arquivoM3uSelecionado.size, "bytes");
+        textoM3u = await lerArquivoTexto(arquivoM3uSelecionado);
+      } else {
+        console.log("Baixando playlist M3U:", sanitizarUrl(url));
+        textoM3u = await fetchPlaylistM3u(url);
       }
 
-      todosFilmes = resultado.filmes;
-      todosSeries = resultado.series;
-      todosCanais = resultado.canais;
-      categoriasFilmes = prepararCategorias(todosFilmes, []);
-      categoriasSeries = prepararCategorias(todosSeries, []);
-      categoriasCanais = prepararCategorias(todosCanais, []);
-      activeServerUrl = url;
-      activeUser = usuario;
-      activePass = senha;
+      aplicarPlaylistM3u(textoM3u, baseM3u);
     } else {
       // Modo Xtream Codes padrão
       console.log("Autenticando via Xtream Codes:", sanitizarUrl(url));
@@ -2777,6 +3332,9 @@ async function entrar(event) {
     currentItem = null;
     currentTipo = "";
     currentStreamUrl = "";
+    currentStreamOriginal = "";
+    streamTentouDireto = false;
+    currentEpisode = null;
 
     const telaLogin = $("#loginScreen");
     const app = $("#appScreen");
@@ -2809,22 +3367,37 @@ async function entrar(event) {
     if (app) app.classList.add("hidden");
 
     let mensagem = "Não foi possível conectar ao servidor IPTV.";
-    const errCode = erro ? erro.message : "";
+    const errCode = erro ? String(erro.message || "") : "";
+    const detalheProxy = erro && erro.detalheProxy ? String(erro.detalheProxy) : "";
 
     if (errCode === "AUTH") {
-      mensagem = "Credenciais Inválidas (401/403):\nO usuário ou senha estão incorretos, ou a sua linha IPTV está inativa/expirada.";
+      if (ehM3u) {
+        mensagem = "A lista M3U foi recusada (401/403):\nConfira se o link está completo (username, password e type=m3u_plus)." +
+          (detalheProxy ? "\n\nDetalhe do proxy: " + detalheProxy : "");
+      } else {
+        mensagem = "Credenciais Inválidas (401/403):\nO usuário ou senha estão incorretos, ou a sua linha IPTV está inativa/expirada." +
+          (detalheProxy ? "\n\nDetalhe do proxy: " + detalheProxy : "");
+      }
     } else if (errCode.startsWith("SECURITY_")) {
       mensagem = "Bloqueio de Segurança:\n" + errCode.replace("SECURITY_", "");
     } else if (errCode === "NOT_FOUND") {
-      mensagem = "Servidor não encontrado (HTTP 404):\nO endereço informado está incorreto ou a API Xtream Codes não responde nesta porta.";
+      mensagem = "Servidor não encontrado (HTTP 404):\nO endereço informado está incorreto ou a API/lista não responde nesta porta.";
     } else if (errCode.startsWith("SERVER_ERROR_")) {
       mensagem = "Instabilidade no Provedor (" + errCode.replace("SERVER_ERROR_", "HTTP ") + "):\nO servidor do seu provedor IPTV apresentou falha interna no momento.";
     } else if (errCode === "INVALID_JSON") {
       mensagem = "Resposta Inesperada:\nO servidor respondeu, mas não retornou uma lista IPTV válida. Verifique se o endereço é a raiz do servidor (ex: http://servidor.com:8080).";
     } else if (errCode === "M3U_VAZIO") {
-      mensagem = "Lista M3U Vazia:\nA playlist foi baixada com sucesso, mas nenhum canal ou filme válido foi encontrado no arquivo.";
+      mensagem = "Lista M3U Vazia:\nA playlist foi lida com sucesso, mas nenhum canal, filme ou série válido foi encontrado no arquivo.";
+    } else if (errCode === "M3U_HTML") {
+      mensagem = "O link retornou uma página HTML, não uma playlist M3U.\nUse o link direto da lista (ex: .../get.php?username=...&password=...&type=m3u_plus) ou baixe o arquivo .m3u e selecione-o na tela.";
+    } else if (errCode === "ARQUIVO_ERRO" || errCode === "ARQUIVO_VAZIO") {
+      mensagem = "Não foi possível ler o arquivo .m3u selecionado.\nTente novamente ou escolha outro arquivo.";
     } else if (errCode === "NETWORK_ERROR") {
-      mensagem = "Falha de Conexão de Rede:\nNão foi possível alcançar o servidor IPTV. Verifique se a URL está correta e com a porta aberta.";
+      mensagem = "Falha de Conexão de Rede:\nNão foi possível alcançar o servidor IPTV por nenhuma rota.\n\n" +
+        "• Se estiver abrindo o HTML como arquivo local, selecione o arquivo .m3u na tela ou configure um proxy.\n" +
+        "• No Cloudflare Pages, confira se a pasta functions/api/proxy.js foi publicada.\n" +
+        "• Verifique se a URL está correta e com a porta aberta." +
+        (detalheProxy ? "\n\nDetalhe do proxy: " + detalheProxy : "");
     }
 
     alert(mensagem);
@@ -2839,27 +3412,24 @@ async function entrar(event) {
 
 /* ---------- URLs de stream ---------- */
 function urlDoFilme(item) {
-  if (item && item.direct_source) return resolverUrlProxy(item.direct_source);
-  const bruta = streamBaseFilmes + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "filme")) + ".mp4";
-  return resolverUrlProxy(bruta);
+  if (item && item.direct_source) return item.direct_source;
+  return streamBaseFilmes + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "filme")) + ".mp4";
 }
 
 function urlDoCanal(item) {
-  if (item && item.direct_source) return resolverUrlProxy(item.direct_source);
-  const bruta = streamBaseCanais + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "canal")) + ".m3u8";
-  return resolverUrlProxy(bruta);
+  if (item && item.direct_source) return item.direct_source;
+  return streamBaseCanais + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(idDoItem(item, "canal")) + ".m3u8";
 }
 
 function urlDoEpisodio(episodio) {
-  if (episodio && episodio.direct_source) return resolverUrlProxy(episodio.direct_source);
+  if (episodio && episodio.direct_source) return episodio.direct_source;
   const id = episodio && (episodio.id != null ? episodio.id : episodio.episode_id);
-  const bruta = streamBaseSeries + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(String(id)) + ".mp4";
-  return resolverUrlProxy(bruta);
+  return streamBaseSeries + "/" + encodeURIComponent(activeUser) + "/" + encodeURIComponent(activePass) + "/" + encodeURIComponent(String(id)) + ".mp4";
 }
 
 function gerarUrlStream(item, tipo) {
   if (!item) return "";
-  if (item.direct_source) return resolverUrlProxy(item.direct_source);
+  if (item.direct_source) return item.direct_source;
   if (tipo === "filme") return urlDoFilme(item);
   if (tipo === "canal") return urlDoCanal(item);
   if (tipo === "serie") return urlDoEpisodio(item);
@@ -3146,6 +3716,7 @@ function renderTelaPrincipal() {
   fecharMenu();
   limparIntervaloSlideshow();
   cancelarCliquePendente();
+  desconectarObservadoresGrade();
   clearTimeout(searchDebounce);
   searchDebounce = null;
   pararVideoAtual();
@@ -3181,6 +3752,7 @@ function prepararNavegacao(limparBusca) {
   fecharMenu();
   limparIntervaloSlideshow();
   cancelarCliquePendente();
+  desconectarObservadoresGrade();
   clearTimeout(searchDebounce);
   searchDebounce = null;
   pararVideoAtual();
@@ -3242,6 +3814,91 @@ function criarEstadoVazio(icone, titulo, texto) {
   vazio.appendChild(tituloEl);
   vazio.appendChild(textoEl);
   return vazio;
+}
+
+function desconectarObservadoresGrade() {
+  observadoresGrade.forEach(function (observador) {
+    try { observador.disconnect(); } catch (erro) {}
+  });
+  observadoresGrade = [];
+}
+
+function contarItensPorCategoria(itens) {
+  const contagem = new Map();
+  (itens || []).forEach(function (item) {
+    const chave = String(item && item.category_id);
+    contagem.set(chave, (contagem.get(chave) || 0) + 1);
+  });
+  return contagem;
+}
+
+const TAMANHO_LOTE_GRADE = 60;
+
+function criarGradePaginada(itens, tipo, fabricaCard) {
+  const lista = Array.isArray(itens) ? itens : [];
+  const fragmento = document.createDocumentFragment();
+  const grade = document.createElement("div");
+  grade.className = "media-grid";
+  fragmento.appendChild(grade);
+
+  const areaMais = document.createElement("div");
+  areaMais.className = "grid-load-more";
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "btn-load-more";
+  areaMais.appendChild(botao);
+  fragmento.appendChild(areaMais);
+
+  let indice = 0;
+  let observador = null;
+
+  function finalizar() {
+    if (observador) {
+      observador.disconnect();
+      const posicao = observadoresGrade.indexOf(observador);
+      if (posicao !== -1) observadoresGrade.splice(posicao, 1);
+      observador = null;
+    }
+    areaMais.classList.add("hidden");
+  }
+
+  function carregarLote() {
+    if (indice >= lista.length) {
+      finalizar();
+      return;
+    }
+
+    const fim = Math.min(indice + TAMANHO_LOTE_GRADE, lista.length);
+    const lote = document.createDocumentFragment();
+    while (indice < fim) {
+      const item = lista[indice];
+      lote.appendChild(fabricaCard ? fabricaCard(item) : criarCard(item, tipo));
+      indice += 1;
+    }
+    grade.appendChild(lote);
+
+    if (indice >= lista.length) {
+      finalizar();
+      return;
+    }
+
+    areaMais.classList.remove("hidden");
+    botao.textContent = "Carregar mais (" + contarTexto(lista.length - indice, "restante", "restantes") + ")";
+  }
+
+  botao.addEventListener("click", carregarLote);
+  carregarLote();
+
+  if (indice < lista.length && "IntersectionObserver" in window) {
+    observador = new IntersectionObserver(function (entradas) {
+      const visivel = entradas.some(function (entrada) { return entrada.isIntersecting; });
+      if (visivel) carregarLote();
+    }, { rootMargin: "600px 0px" });
+    observador.observe(areaMais);
+    observadoresGrade.push(observador);
+  }
+
+  return fragmento;
 }
 
 function criarGrade(itens, tipo) {
@@ -3651,49 +4308,161 @@ function metaDoConteudo(item, tipo) {
   return partes.join(" • ");
 }
 
+function carregarScriptExterno(src) {
+  return new Promise(function (resolve, reject) {
+    const endereco = String(src || "").trim();
+    if (!endereco) {
+      reject(new Error("SCRIPT_VAZIO"));
+      return;
+    }
+    const jaCarregado = Array.from(document.scripts).some(function (script) {
+      return script.src === endereco || script.src.endsWith(endereco);
+    });
+    if (jaCarregado) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = endereco;
+    script.async = true;
+    script.onload = function () { resolve(true); };
+    script.onerror = function () {
+      script.remove();
+      reject(new Error("SCRIPT_FALHOU"));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+function garantirHls() {
+  if (window.Hls) return Promise.resolve(true);
+  if (hlsLoadPromise) return hlsLoadPromise;
+  hlsLoadPromise = carregarScriptExterno("https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js")
+    .then(function () {
+      if (window.Hls) return true;
+      return carregarScriptExterno("hls.min.js");
+    })
+    .catch(function () { return carregarScriptExterno("hls.min.js"); })
+    .then(function () { return Boolean(window.Hls); })
+    .catch(function () { return false; })
+    .then(function (ok) {
+      if (!ok) hlsLoadPromise = null;
+      return ok;
+    });
+  return hlsLoadPromise;
+}
+
+function garantirMpegts() {
+  if (window.mpegts) return Promise.resolve(true);
+  if (mpegtsLoadPromise) return mpegtsLoadPromise;
+  mpegtsLoadPromise = carregarScriptExterno("https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js")
+    .then(function () {
+      if (window.mpegts) return true;
+      return carregarScriptExterno("mpegts.min.js");
+    })
+    .catch(function () { return carregarScriptExterno("mpegts.min.js"); })
+    .then(function () { return Boolean(window.mpegts); })
+    .catch(function () { return false; })
+    .then(function (ok) {
+      if (!ok) mpegtsLoadPromise = null;
+      return ok;
+    });
+  return mpegtsLoadPromise;
+}
+
+function tentarReproduzirVideo(video) {
+  if (!video) return;
+  try {
+    const retorno = video.play();
+    if (retorno && typeof retorno.catch === "function") {
+      retorno.catch(function (erro) {
+        console.warn("Autoplay bloqueado pelo navegador:", erro && erro.message ? erro.message : erro);
+      });
+    }
+  } catch (erro) {}
+}
+
+function tentarStreamDireto() {
+  if (streamTentouDireto) return false;
+  const original = String(currentStreamOriginal || "").trim();
+  if (!original) return false;
+  if (currentStreamUrl === original) return false;
+  if (!urlDiretaPermitida(original)) {
+    console.warn("Fallback direto bloqueado: conteúdo HTTP em página HTTPS.");
+    return false;
+  }
+  streamTentouDireto = true;
+  console.warn("Falha na rota atual. Tentando conexão direta com o servidor IPTV...");
+  definirStream(original, currentTipo || "canal", true);
+  return true;
+}
+
 function tratarErroHls(event, data, hls) {
   if (!data) return;
   console.warn("HLS Error:", data.type, data.details, data.fatal ? "[FATAL]" : "");
 
-  if (data.fatal) {
-    switch (data.type) {
-      case (window.Hls && Hls.ErrorTypes ? Hls.ErrorTypes.NETWORK_ERROR : "networkError"):
-        console.warn("HLS: Erro de rede fatal. Tentando recuperar carga...");
-        if (data.details === "manifestLoadError" || data.details === "manifestParsingError") {
-          mostrarFeedbackPlayer(
-            "Canal Temporariamente Indisponível",
-            "O servidor IPTV não está transmitindo a playlist deste canal no momento (código: " + (data.response && data.response.code ? data.response.code : "Erro de Rede") + ").",
-            true,
-            "📡"
-          );
-          try { hls.destroy(); } catch (e) {}
-          hlsInstance = null;
-        } else {
-          try { hls.startLoad(); } catch (e) {}
-        }
-        break;
-      case (window.Hls && Hls.ErrorTypes ? Hls.ErrorTypes.MEDIA_ERROR : "mediaError"):
-        console.warn("HLS: Erro de decodificação de mídia. Tentando recuperar...");
-        try { hls.recoverMediaError(); } catch (e) {}
-        break;
-      default:
-        console.error("HLS: Erro fatal irrecuperável:", data.details);
-        mostrarFeedbackPlayer(
-          "Falha na Transmissão",
-          "O fluxo de vídeo foi interrompido pelo provedor ou utiliza um formato não suportado pelo navegador. Experimente abrir no VLC ou MX Player.",
-          true,
-          "⚠️"
-        );
-        try { hls.destroy(); } catch (e) {}
-        hlsInstance = null;
-        break;
+  if (!data.fatal) return;
+
+  const tipos = window.Hls && Hls.ErrorTypes ? Hls.ErrorTypes : null;
+  const ehErroRede = tipos
+    ? data.type === tipos.NETWORK_ERROR
+    : String(data.type).toLowerCase().indexOf("network") !== -1;
+  const ehErroMidia = tipos
+    ? data.type === tipos.MEDIA_ERROR
+    : String(data.type).toLowerCase().indexOf("media") !== -1;
+
+  if (ehErroRede) {
+    // Se a rota atual (proxy) falhou, tenta a URL original direto antes de desistir.
+    if (tentarStreamDireto()) return;
+
+    const falhaDePlaylist =
+      data.details === "manifestLoadError" ||
+      data.details === "manifestLoadTimeOut" ||
+      data.details === "manifestParsingError" ||
+      data.details === "levelLoadError" ||
+      data.details === "levelLoadTimeOut";
+
+    if (falhaDePlaylist) {
+      const codigo = data.response && data.response.code ? data.response.code : "Erro de Rede";
+      mostrarFeedbackPlayer(
+        "Canal Temporariamente Indisponível",
+        "Não foi possível carregar a playlist deste canal (código: " + codigo + "). " +
+          "Se você abriu o HTML como arquivo local, use um proxy publicado ou selecione a lista .m3u. " +
+          "Você também pode tentar abrir no VLC ou MX Player.",
+        true,
+        "📡"
+      );
+      try { hls.destroy(); } catch (e) {}
+      if (hlsInstance === hls) hlsInstance = null;
+    } else {
+      console.warn("HLS: Erro de rede fatal. Tentando recarregar segmentos...");
+      try { hls.startLoad(); } catch (e) {}
     }
+    return;
   }
+
+  if (ehErroMidia) {
+    console.warn("HLS: Erro de decodificação de mídia. Tentando recuperar...");
+    try { hls.recoverMediaError(); } catch (e) {}
+    return;
+  }
+
+  console.error("HLS: Erro fatal irrecuperável:", data.details);
+  mostrarFeedbackPlayer(
+    "Falha na Transmissão",
+    "O fluxo de vídeo foi interrompido pelo provedor ou utiliza um formato não suportado pelo navegador. Experimente abrir no VLC ou MX Player.",
+    true,
+    "⚠️"
+  );
+  try { hls.destroy(); } catch (e) {}
+  if (hlsInstance === hls) hlsInstance = null;
 }
 
 function configurarEventosVideo() {
   const video = $("#videoPlayer");
   if (!video) return;
+  if (video.dataset.hmsEventos === "1") return;
+  video.dataset.hmsEventos = "1";
 
   video.addEventListener("error", function () {
     if (video !== $("#videoPlayer")) return;
@@ -3703,6 +4472,8 @@ function configurarEventosVideo() {
     let titulo = "Não foi possível reproduzir";
     let texto = "Ocorreu uma falha ao carregar este conteúdo.";
     let icone = "⚠️";
+
+    if (err && (err.code === 2 || err.code === 4) && tentarStreamDireto()) return;
 
     if (err) {
       switch (err.code) {
@@ -3721,7 +4492,7 @@ function configurarEventosVideo() {
         case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
           titulo = "Formato Não Suportado";
           texto = currentTipo === "canal"
-            ? "O formato desta transmissão ao vivo não é suportado nativamente pelo navegador."
+            ? "O formato desta transmissão ao vivo não é suportado nativamente pelo navegador. Tente VLC ou MX Player."
             : "O arquivo de vídeo não foi encontrado no servidor IPTV ou o formato não é aceito.";
           icone = "📵";
           break;
@@ -3740,26 +4511,7 @@ function configurarEventosVideo() {
   });
 }
 
-function mostrarFeedbackPlayer(titulo, texto, mostrarAcoes, icone) {
-  const feedback = $("#playerFeedback");
-  if (!feedback) return;
-  const tituloEl = $("#feedbackTitle");
-  const textoEl = $("#feedbackText");
-  const iconeEl = $("#feedbackIcon");
-  const acoes = $("#feedbackActions");
-  if (tituloEl) tituloEl.textContent = titulo || "Não foi possível reproduzir";
-  if (textoEl) textoEl.textContent = texto || "Tente usar um player externo para assistir a este conteúdo.";
-  if (iconeEl) iconeEl.textContent = icone || "⚠️";
-  if (acoes) acoes.classList.toggle("hidden", !mostrarAcoes);
-  feedback.classList.remove("hidden");
-}
-
-function ocultarFeedbackPlayer() {
-  const feedback = $("#playerFeedback");
-  if (feedback) feedback.classList.add("hidden");
-}
-
-function definirStream(url, tipo) {
+async function definirStream(url, tipo, manterTentativa) {
   const video = $("#videoPlayer");
   if (!video) return;
   if (!url) {
@@ -3767,17 +4519,80 @@ function definirStream(url, tipo) {
     return;
   }
 
-  // Interrompe e destroi qualquer instancia anterior do Hls.js ou video em execucao
+  const original = String(currentStreamOriginal || url).trim();
+  const tentativaId = ++streamGeneration;
+
+  // Interrompe e destrói qualquer instância anterior do Hls.js/mpegts.js ou vídeo em execução.
   pararVideoAtual();
 
-  currentStreamUrl = url;
+  currentStreamOriginal = original;
+  if (!manterTentativa) streamTentouDireto = false;
+
+  const urlFinal = streamTentouDireto ? original : (resolverUrlProxy(original) || original);
+  currentStreamUrl = urlFinal;
   ocultarFeedbackPlayer();
 
-  const ehHls = tipo === "canal" || /\.m3u8(\?|$)/i.test(url);
+  const extensao = (extensaoDoStream(original) || extensaoDoStream(urlFinal)).toLowerCase();
+  const ehTs = /^(ts|mpegts|m2ts|mts)$/i.test(extensao);
+  const ehMidiaNativa = /^(mp4|m4v|webm|ogv|ogg|mov|mkv|avi|wmv|flv)$/i.test(extensao);
+  const ehHls = /\.m3u8(\?|#|$)/i.test(original) || (tipo === "canal" && !ehTs && !ehMidiaNativa);
+
+  if (ehTs && tipo === "canal") {
+    const carregouMpegts = await garantirMpegts();
+    if (tentativaId !== streamGeneration || !document.body.contains(video)) return;
+
+    if (carregouMpegts && window.mpegts) {
+      try {
+        const recursos = typeof mpegts.getFeatureList === "function" ? mpegts.getFeatureList() : null;
+        if (!recursos || recursos.mseLivePlayback !== false) {
+          mpegtsInstance = mpegts.createPlayer(
+            { type: "mpegts", isLive: true, url: urlFinal },
+            { enableWorker: true, liveBufferLatencyChasing: true, lazyLoad: false, autoCleanupSourceBuffer: true }
+          );
+          mpegtsInstance.on(mpegts.Events.ERROR, function (tipoErro, detalhe) {
+            console.warn("mpegts.js erro:", tipoErro, detalhe);
+            if (tentarStreamDireto()) return;
+            mostrarFeedbackPlayer(
+              "Canal Temporariamente Indisponível",
+              "Não foi possível abrir este canal no formato TS. Tente novamente ou use o VLC/MX Player.",
+              true,
+              "📡"
+            );
+          });
+          mpegtsInstance.attachMediaElement(video);
+          mpegtsInstance.load();
+          try {
+            const reproducao = mpegtsInstance.play();
+            if (reproducao && typeof reproducao.catch === "function") {
+              reproducao.catch(function () { tentarReproduzirVideo(video); });
+            }
+          } catch (erroPlay) {
+            tentarReproduzirVideo(video);
+          }
+          return;
+        }
+      } catch (erro) {
+        console.warn("Falha ao iniciar mpegts.js:", erro);
+        mpegtsInstance = null;
+      }
+    }
+
+    // Sem mpegts.js, tenta o suporte nativo do navegador.
+    video.src = urlFinal;
+    try { video.load(); } catch (e) {}
+    tentarReproduzirVideo(video);
+    return;
+  }
 
   if (ehHls) {
-    // 1. Tenta Hls.js se suportado pelo navegador (Chrome, Edge, Firefox, Brave)
-    if (window.Hls && Hls.isSupported()) {
+    let hlsOk = Boolean(window.Hls && Hls.isSupported());
+    if (!hlsOk) {
+      const carregou = await garantirHls();
+      if (tentativaId !== streamGeneration || !document.body.contains(video)) return;
+      hlsOk = Boolean(carregou && window.Hls && Hls.isSupported());
+    }
+
+    if (hlsOk) {
       try {
         const hls = new Hls({
           enableWorker: true,
@@ -3799,17 +4614,13 @@ function definirStream(url, tipo) {
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-          hls.loadSource(url);
+          hls.loadSource(urlFinal);
         });
 
         hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          if (tentativaId !== streamGeneration) return;
           ocultarFeedbackPlayer();
-          const p = video.play();
-          if (p && typeof p.catch === "function") {
-            p.catch(function (err) {
-              console.warn("Autoplay bloqueado pelo navegador:", err);
-            });
-          }
+          tentarReproduzirVideo(video);
         });
 
         hls.on(Hls.Events.ERROR, function (event, data) {
@@ -3817,21 +4628,23 @@ function definirStream(url, tipo) {
         });
 
         return;
-      } catch (err) {
-        console.error("Falha ao inicializar Hls.js:", err);
+      } catch (erro) {
+        console.error("Falha ao inicializar Hls.js:", erro);
+        if (hlsInstance) {
+          try { hlsInstance.destroy(); } catch (e) {}
+          hlsInstance = null;
+        }
       }
     }
 
-    // 2. Suporte nativo a HLS (Safari no macOS / iOS)
+    // Suporte nativo a HLS (Safari no macOS / iOS).
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = url;
+      video.src = urlFinal;
       try { video.load(); } catch (e) {}
-      const p = video.play();
-      if (p && typeof p.catch === "function") p.catch(function () {});
+      tentarReproduzirVideo(video);
       return;
     }
 
-    // 3. Sem suporte HLS
     mostrarFeedbackPlayer(
       "Transmissão HLS Não Suportada",
       "Seu navegador não possui suporte a streams HLS (M3U8). Abra no VLC ou MX Player.",
@@ -3841,25 +4654,42 @@ function definirStream(url, tipo) {
     return;
   }
 
-  // MP4 streaming (Filmes e Series)
-  video.src = url;
+  // MP4 e demais mídias progressivas (filmes, séries e alguns canais).
+  video.src = urlFinal;
   try { video.load(); } catch (e) {}
-  const tentativa = video.play();
-  if (tentativa && typeof tentativa.catch === "function") {
-    tentativa.catch(function (err) {
-      console.warn("Reprodução automática MP4:", err);
-    });
-  }
+  tentarReproduzirVideo(video);
+}
+
+function mostrarFeedbackPlayer(titulo, texto, mostrarAcoes, icone) {
+  const feedback = $("#playerFeedback");
+  if (!feedback) return;
+  const tituloEl = $("#feedbackTitle");
+  const textoEl = $("#feedbackText");
+  const iconeEl = $("#feedbackIcon");
+  const acoes = $("#feedbackActions");
+  if (tituloEl) tituloEl.textContent = titulo || "Não foi possível reproduzir";
+  if (textoEl) textoEl.textContent = texto || "Tente usar um player externo para assistir a este conteúdo.";
+  if (iconeEl) iconeEl.textContent = icone || "⚠️";
+  if (acoes) acoes.classList.toggle("hidden", !mostrarAcoes);
+  feedback.classList.remove("hidden");
+}
+
+function ocultarFeedbackPlayer() {
+  const feedback = $("#playerFeedback");
+  if (feedback) feedback.classList.add("hidden");
 }
 
 function abrirTelaConteudo(url, item, tipo) {
   if (!item) return;
   const tipoFinal = tipo || tipoDoItem(item);
+  item = resolverItemCompleto(item, tipoFinal);
   prepararNavegacao(false);
   buscaAtiva = false;
   currentItem = item;
   currentTipo = tipoFinal;
   currentStreamUrl = "";
+  currentStreamOriginal = "";
+  streamTentouDireto = false;
   currentSerieId = tipoFinal === "serie" ? (item.series_id != null ? item.series_id : item.id) : null;
   currentSerieName = tipoFinal === "serie" ? String(item.name || "Série") : "";
   currentEpisodesData = {};
@@ -3943,17 +4773,16 @@ function abrirTelaConteudo(url, item, tipo) {
     carregarSerieDetalhes(item);
   } else {
     const endereco = url || gerarUrlStream(item, tipoFinal);
+    currentStreamOriginal = endereco;
     definirStream(endereco, tipoFinal);
   }
 }
 
 function playerPlay() {
   const video = $("#videoPlayer");
-  if (!video || !video.getAttribute("src")) return;
-  const retorno = video.play();
-  if (retorno && typeof retorno.catch === "function") {
-    retorno.catch(function () {});
-  }
+  if (!video) return;
+  if (!video.getAttribute("src") && !hlsInstance && !mpegtsInstance) return;
+  tentarReproduzirVideo(video);
 }
 
 function playerPause() {
@@ -4025,21 +4854,27 @@ function toggleFullScreen() {
 function desempacotarUrlReal(url) {
   if (!url) return "";
   try {
-    if (url.includes("/api/proxy?url=")) {
-      const u = new URL(url, window.location.origin);
-      const real = u.searchParams.get("url");
-      if (real) return real;
+    const u = new URL(url, window.location.origin);
+    if (!/^https?:$/i.test(u.protocol)) return url;
+    const pareceProxy = /\/api\/proxy|\/proxy\/?$/i.test(u.pathname) || /allorigins|corsproxy|codetabs/i.test(u.hostname);
+    if (!pareceProxy) return url;
+    const parametros = ["url", "quest", "u", "target"];
+    for (let i = 0; i < parametros.length; i += 1) {
+      const valor = u.searchParams.get(parametros[i]);
+      if (valor && /^https?:\/\//i.test(valor)) return valor;
     }
+    const bruto = decodeURIComponent(u.pathname.replace(/^\/+/, ""));
+    if (/^https?:\/\//i.test(bruto)) return bruto;
   } catch (e) {}
   return url;
 }
 
 function abrirPlayerExterno(pacote, nomePlayer) {
-  if (!currentStreamUrl) {
+  const url = currentStreamOriginal || desempacotarUrlReal(currentStreamUrl);
+  if (!url) {
     exibirToast("Nenhum vídeo disponível para abrir.");
     return;
   }
-  const url = desempacotarUrlReal(currentStreamUrl);
   const android = /Android/i.test(navigator.userAgent || "");
   if (android) {
     const semProtocolo = url.replace(/^https?:\/\//, "");
@@ -4211,9 +5046,11 @@ function reproduzirEpisodio(numeroTemporada, indice, rolar) {
   }
   const numero = episodio.episode_num != null ? episodio.episode_num : indice + 1;
   const titulo = episodio.title || episodio.name || ("Episódio " + numero);
-  currentEpisode = episodio;
   const stream = urlDoEpisodio(episodio);
+  currentStreamOriginal = stream;
+  streamTentouDireto = false;
   definirStream(stream, "serie");
+  currentEpisode = episodio;
 
   const atual = $("#episodioAtual");
   if (atual) {
@@ -4255,7 +5092,17 @@ async function carregarSerieDetalhes(item) {
   currentEpisode = null;
 
   try {
-    const dados = await fetchJson(apiUrl("get_series_info", { series_id: serieId }));
+    let dados;
+    if (item._m3u) {
+      dados = {
+        episodes: item._episodesPorTemporada && typeof item._episodesPorTemporada === "object"
+          ? item._episodesPorTemporada
+          : {},
+        info: { plot: item.plot || item.description || item.descricao || "" }
+      };
+    } else {
+      dados = await fetchJson(apiUrl("get_series_info", { series_id: serieId }));
+    }
     if (!area || !document.body.contains(area) || currentTipo !== "serie" || String(currentSerieId) !== String(serieId)) return;
     if (!dados || typeof dados !== "object") throw new Error("Sem dados");
 
@@ -4353,6 +5200,8 @@ function logout() {
   currentItem = null;
   currentTipo = "";
   currentStreamUrl = "";
+  currentStreamOriginal = "";
+  streamTentouDireto = false;
   currentSerieId = null;
   currentSerieName = "";
   currentEpisodesData = {};
@@ -4404,6 +5253,14 @@ function inicializar() {
   if (modoSalvo === "m3u") alternarModoLogin("m3u");
   const form = $("#loginForm");
   if (form) form.addEventListener("submit", entrar);
+  configurarArquivoM3u();
+  const seletorProxy = $("#proxyMode");
+  if (seletorProxy) seletorProxy.addEventListener("change", salvarConfigProxy);
+  const proxyCustom = $("#proxyCustomUrl");
+  if (proxyCustom) {
+    proxyCustom.addEventListener("change", salvarConfigProxy);
+    proxyCustom.addEventListener("blur", salvarConfigProxy);
+  }
   preencherLoginSalvo();
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") fecharMenu();
