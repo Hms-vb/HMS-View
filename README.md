@@ -17,6 +17,16 @@ que impedem listas M3U, filmes e canais ao vivo de abrir no navegador.
   barra de progresso nos cards e nos episódios.
 - **Volume no player:** botão de mudo, botões **−** e **+**, slider e percentual.
   Atalhos: `↑` aumenta, `↓` diminui e `M` silencia.
+- **Barra flutuante de progresso e controles:** a minutagem e os botões do player
+  ficam sobre o vídeo, com tempo decorrido/total, arraste para avançar ou voltar e
+  ocultação automática após alguns segundos sem interação. A barra volta a
+  aparecer com o movimento do mouse ou um toque na tela, no computador e no
+  celular. Em canais ao vivo mostra **AO VIVO**.
+- **Extensão real do stream:** filmes e episódios usam o `container_extension`
+  informado pelo provedor (mp4, mkv, avi etc.) em vez de forçar sempre `.mp4`.
+- **Player nativo no app Android:** quando o WebView não consegue decodificar o
+  formato/codec (MKV, TS, HEVC etc.), o app abre automaticamente um player
+  Media3/ExoPlayer. Também há o botão **Player do app** no player.
 - **Proxy CORS/HTTPS** para listas, APIs Xtream, HLS, MP4 e canais `.ts`.
 
 ## Arquivos
@@ -80,15 +90,11 @@ Configure em **Cloudflare Pages → Settings → Variables and Secrets**:
 
 | Variável | Exemplo | Efeito |
 |---|---|---|
-| `ALLOWED_HOSTS` | `meuservidor.com,*.meuprovedor.com` | Só permite que o proxy acesse esses hosts. Recomendado para não deixar um proxy aberto. Inclua também os domínios de CDN para onde o provedor redireciona filmes. |
+| `ALLOWED_HOSTS` | `meuservidor.com,*.meuprovedor.com` | Só permite que o proxy acesse esses hosts. Recomendado para não deixar um proxy aberto. |
 | `ALLOWED_ORIGINS` | `https://hms-tv.pages.dev` | Restringe quais sites podem chamar o proxy pelo navegador. |
 
 Sem essas variáveis o proxy é aberto (CORS `*`), o que facilita o teste, mas não é
 recomendado para uso público.
-
-> Se `ALLOWED_HOSTS` estiver configurado, um filme que redireciona para outro
-> domínio (por exemplo, um CDN de vídeo) será recusado. Adicione o domínio do CDN
-> à lista ou use `*` durante os testes.
 
 ## Como o proxy funciona
 
@@ -99,14 +105,6 @@ recomendado para uso público.
 - **Somente manifestos HLS (`.m3u8`) são lidos e reescritos**, para que
   sub-playlists, segmentos, chaves AES e mapas de inicialização também passem por
   `/api/proxy` e não sofram bloqueio de CORS.
-- **Filmes e episódios em MP4 usam o modo `?redirect=1`.** Muitos provedores
-  respondem ao link do filme com um redirecionamento para um CDN/anti-leech que
-  bloqueia os IPs de datacenter do Cloudflare. Nesse modo o Worker faz apenas a
-  requisição que gera o link assinado, devolve um **302** e o navegador baixa o
-  vídeo direto do CDN, usando o IP do visitante. O player continua funcionando
-  normalmente e o tráfego de vídeo não passa pelas Functions.
-- Se o CDN não aceitar HTTPS, o player tenta automaticamente a rota antiga de
-  streaming pelo proxy antes de exibir o erro.
 - Encaminha `Range`/`If-Range` e preserva status `206 Partial Content` para MP4 e
   outros streams.
 - Segue redirecionamentos validando cada destino.
