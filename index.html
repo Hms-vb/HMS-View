@@ -1578,6 +1578,157 @@ img {
   background: #000000;
 }
 
+/* ---------- Barra flutuante de progresso do player ---------- */
+.player-float-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 46px 20px 14px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 55%, rgba(0, 0, 0, 0.88) 100%);
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+}
+
+.player-float-bar.oculto {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  pointer-events: none;
+}
+
+.player-seek-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.player-time {
+  flex: 0 0 auto;
+  min-width: 48px;
+  color: #f5f5f5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+#playerDuration {
+  text-align: right;
+}
+
+.player-seek {
+  --seek-progresso: 0%;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  touch-action: none;
+}
+
+.player-seek::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    var(--red) 0%,
+    var(--red) var(--seek-progresso),
+    rgba(255, 255, 255, 0.32) var(--seek-progresso),
+    rgba(255, 255, 255, 0.32) 100%
+  );
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+.player-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4.5px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(229, 9, 20, 0.28), 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.player-seek:hover::-webkit-slider-thumb,
+.player-seek:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.18);
+  box-shadow: 0 0 0 6px rgba(229, 9, 20, 0.32), 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.player-seek::-moz-range-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.player-seek::-moz-range-progress {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--red);
+}
+
+.player-seek::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(229, 9, 20, 0.28), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.player-seek:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.player-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border: 1px solid rgba(229, 9, 20, 0.45);
+  border-radius: 4px;
+  background: rgba(229, 9, 20, 0.16);
+  color: #ff6b72;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  animation: playerLivePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes playerLivePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 .player-feedback {
   position: absolute;
   inset: 0;
@@ -1884,6 +2035,23 @@ img {
   .volume-value {
     min-width: 32px;
     font-size: 0.64rem;
+  }
+
+  .player-float-bar {
+    padding: 36px 12px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .player-seek-row {
+    gap: 8px;
+  }
+
+  .player-time {
+    min-width: 40px;
+    font-size: 0.66rem;
+  }
+
+  .player-seek {
+    height: 26px;
   }
 }
 
@@ -2500,7 +2668,6 @@ let modoProxy = "auto";
 let proxyPersonalizado = "";
 let arquivoM3uSelecionado = null;
 let streamTentouDireto = false;
-let streamTentouProxyNormal = false;
 let currentStreamOriginal = "";
 let streamGeneration = 0;
 let hlsLoadPromise = null;
@@ -2541,6 +2708,9 @@ let currentPlayback = null;
 let pendingResume = null;
 let ultimoSalvamentoProgresso = 0;
 let volumeAnteriorMudo = 1;
+let playerUiTimer = null;
+let playerUiSegurando = false;
+let playerUiGlobalBound = false;
 
 /* ---------- Utilitarios de Seguranca e URLs ---------- */
 const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
@@ -2583,12 +2753,6 @@ function montarUrlProxy(proxyBase, urlAlvo) {
   return base + "?url=" + encodeURIComponent(alvo);
 }
 
-function montarUrlProxyRedirecionamento(proxyBase, urlAlvo) {
-  const base = montarUrlProxy(proxyBase, urlAlvo);
-  if (!base) return "";
-  return base + (base.includes("?") ? "&" : "?") + "redirect=1";
-}
-
 function deveUsarProxy() {
   if (modoProxy === "off") return false;
   if (modoProxy === "on") return true;
@@ -2608,26 +2772,6 @@ function resolverUrlProxy(url, forcarDireto) {
   const proxy = obterProxyBase();
   if (!proxy) return valor;
   return montarUrlProxy(proxy, valor);
-}
-
-/**
- * Usa o modo "redirect" do proxy para filmes e episódios.
- *
- * O proxy devolve um 302 para o link assinado final (já em HTTPS) e o
- * navegador baixa o vídeo direto do CDN do provedor. Assim o stream não passa
- * pelos IPs do Cloudflare, que costumam ser bloqueados pelo anti-leech.
- */
-function resolverUrlProxyRedirecionamento(url) {
-  if (!url) return "";
-  const valor = String(url).trim();
-  if (!valor) return "";
-  if (/^(data:|blob:)/i.test(valor)) return valor;
-  if (valor.startsWith("/api/proxy")) return valor;
-  if (valor.startsWith("./") || (valor.startsWith("/") && !valor.startsWith("//"))) return valor;
-  if (!deveUsarProxy()) return valor;
-  const proxy = obterProxyBase();
-  if (!proxy) return valor;
-  return montarUrlProxyRedirecionamento(proxy, valor);
 }
 
 function urlDiretaPermitida(url) {
@@ -3458,6 +3602,149 @@ function atualizarProgressoPeriodico() {
   salvarProgressoAtual();
 }
 
+/* ---------- Barra flutuante de progresso (minutagem) ---------- */
+function formatarTempoPlayer(segundos) {
+  const total = Math.max(0, Math.floor(Number(segundos) || 0));
+  const horas = Math.floor(total / 3600);
+  const minutos = Math.floor((total % 3600) / 60);
+  const restantes = total % 60;
+  const mm = String(minutos).padStart(2, "0");
+  const ss = String(restantes).padStart(2, "0");
+  if (horas > 0) return horas + ":" + mm + ":" + ss;
+  return mm + ":" + ss;
+}
+
+function atualizarBarraProgresso(video) {
+  const alvo = video || $("#videoPlayer");
+  if (!alvo) return;
+  const barra = $("#playerFloatBar");
+  const seek = $("#playerSeek");
+  const linha = $("#playerSeekRow");
+  const rotuloAtual = $("#playerCurrentTime");
+  const rotuloTotal = $("#playerDuration");
+  const aoVivo = $("#playerLiveBadge");
+  if (!seek || !rotuloAtual || !rotuloTotal) return;
+
+  const duracao = Number(alvo.duration);
+  const tempo = Number(alvo.currentTime) || 0;
+  const carregou = Number.isFinite(duracao) && duracao > 0;
+  const ehAoVivo = !carregou && (duracao === Infinity || alvo.readyState >= 1);
+
+  if (ehAoVivo) {
+    if (linha) linha.classList.add("hidden");
+    if (aoVivo) aoVivo.classList.remove("hidden");
+    if (barra) barra.classList.add("ao-vivo");
+    seek.disabled = true;
+    return;
+  }
+
+  if (linha) linha.classList.remove("hidden");
+  if (aoVivo) aoVivo.classList.add("hidden");
+  if (barra) barra.classList.remove("ao-vivo");
+  seek.disabled = !carregou;
+
+  if (!carregou) {
+    seek.value = "0";
+    seek.style.setProperty("--seek-progresso", "0%");
+    rotuloAtual.textContent = "00:00";
+    rotuloTotal.textContent = "00:00";
+    return;
+  }
+
+  const percentual = Math.max(0, Math.min(100, (tempo / duracao) * 100));
+  if (!playerUiSegurando) seek.value = String(Math.round(percentual * 10));
+  seek.style.setProperty("--seek-progresso", percentual.toFixed(2) + "%");
+  rotuloAtual.textContent = formatarTempoPlayer(tempo);
+  rotuloTotal.textContent = formatarTempoPlayer(duracao);
+}
+
+function playerSeekInput(valor) {
+  const video = $("#videoPlayer");
+  if (!video) return;
+  const duracao = Number(video.duration);
+  if (!Number.isFinite(duracao) || duracao <= 0) return;
+  const fracao = Math.max(0, Math.min(1, (Number(valor) || 0) / 1000));
+  try { video.currentTime = fracao * duracao; } catch (erro) {}
+  atualizarBarraProgresso(video);
+}
+
+function agendarOcultarBarraPlayer() {
+  if (playerUiTimer) {
+    clearTimeout(playerUiTimer);
+    playerUiTimer = null;
+  }
+  if (playerUiSegurando) return;
+  playerUiTimer = setTimeout(function () {
+    playerUiTimer = null;
+    if (playerUiSegurando) return;
+    const barra = $("#playerFloatBar");
+    if (barra) barra.classList.add("oculto");
+  }, 3200);
+}
+
+function mostrarBarraPlayer() {
+  const barra = $("#playerFloatBar");
+  if (!barra) return;
+  barra.classList.remove("oculto");
+  agendarOcultarBarraPlayer();
+}
+
+function configurarBarraFlutuante(video) {
+  const wrapper = $("#playerWrapper");
+  const seek = $("#playerSeek");
+  const barra = $("#playerFloatBar");
+  if (!wrapper || !seek || !barra) return;
+
+  const revelar = function () { mostrarBarraPlayer(); };
+  const controles = $(".player-controls");
+
+  wrapper.addEventListener("mousemove", revelar);
+  wrapper.addEventListener("mouseenter", revelar);
+  wrapper.addEventListener("mouseleave", agendarOcultarBarraPlayer);
+  wrapper.addEventListener("touchstart", revelar, { passive: true });
+  wrapper.addEventListener("touchmove", revelar, { passive: true });
+
+  if (controles) {
+    controles.addEventListener("mousemove", revelar);
+    controles.addEventListener("touchstart", revelar, { passive: true });
+  }
+
+  seek.addEventListener("input", function () {
+    playerSeekInput(seek.value);
+    revelar();
+  });
+  seek.addEventListener("pointerdown", function () {
+    playerUiSegurando = true;
+    revelar();
+  });
+  seek.addEventListener("touchstart", function () {
+    playerUiSegurando = true;
+    revelar();
+  }, { passive: true });
+
+  if (!playerUiGlobalBound) {
+    playerUiGlobalBound = true;
+    const soltar = function () {
+      if (!playerUiSegurando) return;
+      playerUiSegurando = false;
+      agendarOcultarBarraPlayer();
+    };
+    window.addEventListener("pointerup", soltar);
+    window.addEventListener("pointercancel", soltar);
+    window.addEventListener("touchend", soltar, { passive: true });
+    window.addEventListener("touchcancel", soltar, { passive: true });
+    window.addEventListener("blur", function () {
+      playerUiSegurando = false;
+      agendarOcultarBarraPlayer();
+    });
+    document.addEventListener("fullscreenchange", revelar);
+    document.addEventListener("webkitfullscreenchange", revelar);
+  }
+
+  atualizarBarraProgresso(video);
+  revelar();
+}
+
 /* ---------- Volume do player ---------- */
 function obterVolumeSalvo() {
   const valor = Number(storageGet("volume_player", "1"));
@@ -4165,7 +4452,6 @@ async function entrar(event) {
     currentStreamUrl = "";
     currentStreamOriginal = "";
     streamTentouDireto = false;
-    streamTentouProxyNormal = false;
     currentEpisode = null;
 
     const telaLogin = $("#loginScreen");
@@ -5247,24 +5533,6 @@ function tentarStreamDireto() {
   return true;
 }
 
-function streamAtualEmRedirecionamento() {
-  return /(?:[?&])redirect=1(?:&|$)/i.test(String(currentStreamUrl || ""));
-}
-
-function tentarStreamProxyNormal() {
-  if (streamTentouProxyNormal) return false;
-  if (!streamAtualEmRedirecionamento()) return false;
-  const original = String(currentStreamOriginal || "").trim();
-  if (!original) return false;
-  if (!deveUsarProxy()) return false;
-  const proxyUrl = resolverUrlProxy(original);
-  if (!proxyUrl || proxyUrl === currentStreamUrl) return false;
-  streamTentouProxyNormal = true;
-  console.warn("Falha no redirecionamento. Tentando streaming pelo proxy...");
-  definirStream(original, currentTipo || "canal", true, "proxy");
-  return true;
-}
-
 function tratarErroHls(event, data, hls) {
   if (!data) return;
   console.warn("HLS Error:", data.type, data.details, data.fatal ? "[FATAL]" : "");
@@ -5349,10 +5617,7 @@ function configurarEventosVideo() {
     let texto = "Ocorreu uma falha ao carregar este conteúdo.";
     let icone = "⚠️";
 
-    if (err && (err.code === 2 || err.code === 4)) {
-      if (tentarStreamProxyNormal()) return;
-      if (tentarStreamDireto()) return;
-    }
+    if (err && (err.code === 2 || err.code === 4) && tentarStreamDireto()) return;
 
     if (err) {
       switch (err.code) {
@@ -5385,6 +5650,11 @@ function configurarEventosVideo() {
     if (video !== $("#videoPlayer")) return;
     talvezMostrarOverlayRetomar();
     atualizarInterfaceVolume(video);
+    atualizarBarraProgresso(video);
+  });
+
+  video.addEventListener("durationchange", function () {
+    if (video === $("#videoPlayer")) atualizarBarraProgresso(video);
   });
 
   video.addEventListener("loadeddata", function () {
@@ -5396,7 +5666,9 @@ function configurarEventosVideo() {
   });
 
   video.addEventListener("timeupdate", function () {
-    if (video === $("#videoPlayer")) atualizarProgressoPeriodico();
+    if (video !== $("#videoPlayer")) return;
+    atualizarProgressoPeriodico();
+    atualizarBarraProgresso(video);
   });
 
   video.addEventListener("pause", function () {
@@ -5414,9 +5686,11 @@ function configurarEventosVideo() {
   video.addEventListener("volumechange", function () {
     if (video === $("#videoPlayer")) atualizarInterfaceVolume(video);
   });
+
+  configurarBarraFlutuante(video);
 }
 
-async function definirStream(url, tipo, manterTentativa, modoForcado) {
+async function definirStream(url, tipo, manterTentativa) {
   const video = $("#videoPlayer");
   if (!video) return;
   if (!url) {
@@ -5435,26 +5709,16 @@ async function definirStream(url, tipo, manterTentativa, modoForcado) {
   pararVideoAtual(manterTentativa);
 
   currentStreamOriginal = original;
-  if (!manterTentativa) {
-    streamTentouDireto = false;
-    streamTentouProxyNormal = false;
-  }
+  if (!manterTentativa) streamTentouDireto = false;
 
-  const extensao = (extensaoDoStream(original) || extensaoDoStream(url) || "").toLowerCase();
+  const urlFinal = streamTentouDireto ? original : (resolverUrlProxy(original) || original);
+  currentStreamUrl = urlFinal;
+  ocultarFeedbackPlayer();
+
+  const extensao = (extensaoDoStream(original) || extensaoDoStream(urlFinal)).toLowerCase();
   const ehTs = /^(ts|mpegts|m2ts|mts)$/i.test(extensao);
   const ehMidiaNativa = /^(mp4|m4v|webm|ogv|ogg|mov|mkv|avi|wmv|flv)$/i.test(extensao);
   const ehHls = /\.m3u8(\?|#|$)/i.test(original) || (tipo === "canal" && !ehTs && !ehMidiaNativa);
-
-  // Filmes e episódios em MP4 usam o modo "redirect": o proxy apenas resolve
-  // o link assinado do CDN e o navegador baixa o vídeo direto, sem passar
-  // pelos IPs do Cloudflare (que o anti-leech do provedor costuma bloquear).
-  const progressivo = !ehHls && !ehTs && tipo !== "canal";
-  const usarRedirecionamento = progressivo && modoForcado !== "proxy";
-  const urlFinal = streamTentouDireto
-    ? original
-    : ((usarRedirecionamento ? resolverUrlProxyRedirecionamento(original) : resolverUrlProxy(original)) || original);
-  currentStreamUrl = urlFinal;
-  ocultarFeedbackPlayer();
 
   if (ehTs && tipo === "canal") {
     const carregouMpegts = await garantirMpegts();
@@ -5609,7 +5873,6 @@ function abrirTelaConteudo(url, item, tipo) {
   currentStreamUrl = "";
   currentStreamOriginal = "";
   streamTentouDireto = false;
-  streamTentouProxyNormal = false;
   currentSerieId = tipoFinal === "serie" ? (item.series_id != null ? item.series_id : item.id) : null;
   currentSerieName = tipoFinal === "serie" ? String(item.name || "Série") : "";
   currentEpisodesData = {};
@@ -5644,6 +5907,14 @@ function abrirTelaConteudo(url, item, tipo) {
       '<div class="player-shell" id="playerShell">' +
         '<div class="player-wrapper" id="playerWrapper">' +
           '<video id="videoPlayer" playsinline preload="metadata" poster="' + esc(poster) + '"></video>' +
+          '<div id="playerFloatBar" class="player-float-bar oculto">' +
+            '<div id="playerSeekRow" class="player-seek-row">' +
+              '<span id="playerCurrentTime" class="player-time">00:00</span>' +
+              '<input id="playerSeek" class="player-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Progresso do vídeo">' +
+              '<span id="playerDuration" class="player-time">00:00</span>' +
+            '</div>' +
+            '<span id="playerLiveBadge" class="player-live-badge hidden"><span class="live-dot"></span>AO VIVO</span>' +
+          '</div>' +
           '<div id="playerFeedback" class="player-feedback hidden">' +
             '<span id="feedbackIcon" class="feedback-icon">⚠️</span>' +
             '<h3 id="feedbackTitle">Não foi possível reproduzir</h3>' +
@@ -5756,12 +6027,14 @@ function playerStop() {
     video.pause();
     video.currentTime = 0;
   } catch (erro) {}
+  atualizarBarraProgresso(video);
 }
 
 function playerBack() {
   const video = $("#videoPlayer");
   if (!video) return;
   try { video.currentTime = Math.max(0, video.currentTime - 10); } catch (erro) {}
+  atualizarBarraProgresso(video);
 }
 
 function playerForward() {
@@ -5771,6 +6044,7 @@ function playerForward() {
     const limite = Number.isFinite(video.duration) ? video.duration : video.currentTime + 10;
     video.currentTime = Math.min(limite, video.currentTime + 10);
   } catch (erro) {}
+  atualizarBarraProgresso(video);
 }
 
 function toggleFullScreen() {
@@ -6017,7 +6291,6 @@ function reproduzirEpisodio(numeroTemporada, indice, rolar) {
   const stream = urlDoEpisodio(episodio);
   currentStreamOriginal = stream;
   streamTentouDireto = false;
-  streamTentouProxyNormal = false;
   definirStream(stream, "serie");
   currentEpisode = episodio;
 
@@ -6226,7 +6499,6 @@ function logout() {
   currentStreamUrl = "";
   currentStreamOriginal = "";
   streamTentouDireto = false;
-  streamTentouProxyNormal = false;
   currentSerieId = null;
   currentSerieName = "";
   currentEpisodesData = {};
