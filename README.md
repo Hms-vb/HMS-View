@@ -78,11 +78,20 @@ npx wrangler pages deploy . --project-name hms-tv
 O upload pelo painel (“Direct Upload” arrastando arquivos) **não publica a pasta
 `functions`**. Use Git ou Wrangler para ter o proxy funcionando.
 
+> **Atenção:** publique somente os arquivos do site (`index.html`, `hls.min.js`,
+> `mpegts.min.js`, `functions/` e `wrangler.toml`). Não rode o comando na raiz que
+> contém `android/`; essa pasta tem keystore e credenciais de assinatura e não
+> deve ir para a web.
+
 ### Configuração no app
 
-Depois de publicado, abra o site `https://seu-projeto.pages.dev`. Em
-**⚙️ Conexão / Proxy**, mantenha **Automático (recomendado)**. Em HTTPS o app usa
-`/api/proxy` sozinho para listas, APIs Xtream, HLS, MP4 e canais `.ts`.
+Depois de publicado, abra o site `https://seu-projeto.pages.dev` no app HMS-TV. Em
+**⚙️ Conexão / Proxy**, mantenha **Automático (recomendado)**.
+
+- No navegador comum (HTTPS), o app usa `/api/proxy` para listas, APIs Xtream,
+  HLS, MP4 e canais `.ts`.
+- No APK, o WebView usa a conexão direta do aparelho primeiro para canais HTTP.
+  Se a origem recusar, tenta o proxy e, por fim, abre o player nativo Media3.
 
 ## Variáveis de ambiente opcionais
 
@@ -141,9 +150,9 @@ usado para os streams que precisam de HTTPS/CORS.
 5. **Prefira o modo rápido.** Com uma URL `get.php` que tenha `username` e
    `password`, o app tenta a API Xtream primeiro. Se o provedor bloquear a API, ele
    volta automaticamente para a M3U.
-6. **Provedores que bloqueiam IPs do Cloudflare** podem continuar indisponíveis.
-   Nesse caso, baixe a lista `.m3u` e selecione o arquivo localmente, ou use um
-   player externo (VLC/MX Player).
+6. **Provedores que bloqueiam IPs do Cloudflare** não funcionam pelo site. Use o
+   app HMS-TV: ele tenta a conexão direta do aparelho e, se necessário, abre o
+   player nativo. VLC/MX Player continuam disponíveis como fallback manual.
 
 ## Limites e observações
 
@@ -152,5 +161,9 @@ usado para os streams que precisam de HTTPS/CORS.
   assistido e não é sincronizado entre aparelhos.
 - Em uma página HTTPS, streams HTTP puros podem ser bloqueados pelo navegador
   (mixed content). O proxy resolve isso quando a origem permite a conexão.
+- Provedores que bloqueiam os IPs do Cloudflare não tocam canais HTTP pelo site,
+  mesmo com proxy. No APK, o WebView usa a rede direta do aparelho e consegue
+  abrir esses canais; se o WebView não decodificar o formato, o player nativo
+  Media3 assume.
 - O HTML continua funcionando como arquivo único para Xtream/M3U, desde que a
   origem libere CORS ou você use um proxy publicado.

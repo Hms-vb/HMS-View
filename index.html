@@ -2698,7 +2698,10 @@ let modoProxy = "auto";
 let proxyPersonalizado = "";
 let arquivoM3uSelecionado = null;
 let streamTentouDireto = false;
+let streamTentouProxy = false;
+let streamRota = "";
 let fallbackVideoNativoFeito = false;
+let hlsTentouRecuperarMidia = false;
 let currentStreamOriginal = "";
 let streamGeneration = 0;
 let hlsLoadPromise = null;
@@ -2792,21 +2795,25 @@ function deveUsarProxy() {
   return window.location.protocol === "https:" || (!!window.location.hostname && !hostLocal());
 }
 
-function resolverUrlProxy(url, forcarDireto) {
+function resolverUrlProxy(url, forcarDireto, forcarProxy) {
   if (!url) return "";
   const valor = String(url).trim();
   if (!valor) return "";
   if (/^(data:|blob:)/i.test(valor)) return valor;
   if (valor.startsWith("/api/proxy")) return valor;
   if (valor.startsWith("./") || (valor.startsWith("/") && !valor.startsWith("//"))) return valor;
-  if (forcarDireto || !deveUsarProxy()) return valor;
+  if (forcarDireto || (!forcarProxy && !deveUsarProxy())) return valor;
   const proxy = obterProxyBase();
   if (!proxy) return valor;
   return montarUrlProxy(proxy, valor);
 }
 
 function urlDiretaPermitida(url) {
-  if (window.location.protocol === "https:" && /^http:\/\//i.test(url)) return false;
+  if (window.location.protocol === "https:" && /^http:\/\//i.test(url)) {
+    // O WebView do app permite conteúdo misto e usa a rede do aparelho,
+    // que consegue acessar servidores IPTV bloqueados para datacenters.
+    return temPlayerNativoApp();
+  }
   return true;
 }
 
@@ -4497,7 +4504,7 @@ async function entrar(event) {
     currentTipo = "";
     currentStreamUrl = "";
     currentStreamOriginal = "";
-    streamTentouDireto = false;
+    resetarTentativasStream();
     currentEpisode = null;
 
     const telaLogin = $("#loginScreen");
@@ -5566,17 +5573,60 @@ function tentarReproduzirVideo(video) {
   } catch (erro) {}
 }
 
+function resetarTentativasStream() {
+  streamTentouDireto = false;
+  streamTentouProxy = false;
+  streamRota = "";
+  fallbackVideoNativoFeito = false;
+  hlsTentouRecuperarMidia = false;
+}
+
+function rotaDiretaPreferida(url) {
+  const valor = String(url || "").trim();
+  if (!valor) return false;
+  return temPlayerNativoApp() && /^http:\/\//i.test(valor) && urlDiretaPermitida(valor);
+}
+
+function escolherUrlStream(original) {
+  if (streamRota === "direto") return { url: original, rota: "direto" };
+  if (streamRota === "proxy") {
+    const viaProxy = resolverUrlProxy(original, false, true);
+    if (viaProxy && viaProxy !== original) return { url: viaProxy, rota: "proxy" };
+    return { url: original, rota: "direto" };
+  }
+  if (rotaDiretaPreferida(original) || !deveUsarProxy()) {
+    return { url: original, rota: "direto" };
+  }
+  const viaProxy = resolverUrlProxy(original);
+  if (viaProxy && viaProxy !== original) return { url: viaProxy, rota: "proxy" };
+  return { url: original, rota: "direto" };
+}
+
 function tentarStreamDireto() {
   if (streamTentouDireto) return false;
   const original = String(currentStreamOriginal || "").trim();
   if (!original) return false;
-  if (currentStreamUrl === original) return false;
   if (!urlDiretaPermitida(original)) {
     console.warn("Fallback direto bloqueado: conteúdo HTTP em página HTTPS.");
     return false;
   }
   streamTentouDireto = true;
+  streamRota = "direto";
   console.warn("Falha na rota atual. Tentando conexão direta com o servidor IPTV...");
+  definirStream(original, currentTipo || "canal", true);
+  return true;
+}
+
+function tentarStreamProxy() {
+  if (streamTentouProxy) return false;
+  const original = String(currentStreamOriginal || "").trim();
+  if (!original) return false;
+  if (!deveUsarProxy()) return false;
+  const viaProxy = resolverUrlProxy(original, false, true);
+  if (!viaProxy || viaProxy === original) return false;
+  streamTentouProxy = true;
+  streamRota = "proxy";
+  console.warn("Falha na conexão direta. Tentando novamente pelo proxy...");
   definirStream(original, currentTipo || "canal", true);
   return true;
 }
@@ -5596,8 +5646,15 @@ function tratarErroHls(event, data, hls) {
     : String(data.type).toLowerCase().indexOf("media") !== -1;
 
   if (ehErroRede) {
-    // Se a rota atual (proxy) falhou, tenta a URL original direto antes de desistir.
+    // Tenta a rota alternativa (direta ou proxy). No app, se as duas falharem,
+    // abre automaticamente o player nativo em vez de mandar para o MX Player.
     if (tentarStreamDireto()) return;
+    if (tentarStreamProxy()) return;
+    if (temPlayerNativoApp() && !fallbackVideoNativoFeito) {
+      try { hls.destroy(); } catch (e) {}
+      if (hlsInstance === hls) hlsInstance = null;
+      if (tentarPlayerNativoAutomatico()) return;
+    }
 
     const falhaDePlaylist =
       data.details === "manifestLoadError" ||
@@ -5608,10 +5665,13 @@ function tratarErroHls(event, data, hls) {
 
     if (falhaDePlaylist) {
       const codigo = data.response && data.response.code ? data.response.code : "Erro de Rede";
+      const dicaProxy = codigo === 403
+        ? "O servidor deste canal bloqueia o proxy do site. Abra pelo app HMS-TV para usar a conexão direta do aparelho. "
+        : "Se você abriu o HTML como arquivo local, use um proxy publicado ou selecione a lista .m3u. ";
       mostrarFeedbackPlayer(
         "Canal Temporariamente Indisponível",
         "Não foi possível carregar a playlist deste canal (código: " + codigo + "). " +
-          "Se você abriu o HTML como arquivo local, use um proxy publicado ou selecione a lista .m3u. " +
+          dicaProxy +
           "Você também pode tentar abrir no VLC ou MX Player.",
         true,
         "📡"
@@ -5626,9 +5686,16 @@ function tratarErroHls(event, data, hls) {
   }
 
   if (ehErroMidia) {
-    console.warn("HLS: Erro de decodificação de mídia. Tentando recuperar...");
-    try { hls.recoverMediaError(); } catch (e) {}
-    return;
+    if (!hlsTentouRecuperarMidia) {
+      hlsTentouRecuperarMidia = true;
+      console.warn("HLS: Erro de decodificação de mídia. Tentando recuperar...");
+      try { hls.recoverMediaError(); } catch (e) {}
+      return;
+    }
+    console.warn("HLS: Erro de decodificação persistente. Abrindo player do app...");
+    try { hls.destroy(); } catch (e) {}
+    if (hlsInstance === hls) hlsInstance = null;
+    if (tentarPlayerNativoAutomatico()) return;
   }
 
   console.error("HLS: Erro fatal irrecuperável:", data.details);
@@ -5666,7 +5733,8 @@ function configurarEventosVideo() {
     let icone = "⚠️";
 
     if (err && (err.code === 2 || err.code === 4) && tentarStreamDireto()) return;
-    if (err && (err.code === 3 || err.code === 4) && tentarPlayerNativoAutomatico()) return;
+    if (err && (err.code === 2 || err.code === 4) && tentarStreamProxy()) return;
+    if (err && (err.code === 2 || err.code === 3 || err.code === 4) && tentarPlayerNativoAutomatico()) return;
 
     if (err) {
       switch (err.code) {
@@ -5758,12 +5826,13 @@ async function definirStream(url, tipo, manterTentativa) {
   pararVideoAtual(manterTentativa);
 
   currentStreamOriginal = original;
-  if (!manterTentativa) {
-    streamTentouDireto = false;
-    fallbackVideoNativoFeito = false;
-  }
+  if (!manterTentativa) resetarTentativasStream();
 
-  const urlFinal = streamTentouDireto ? original : (resolverUrlProxy(original) || original);
+  const escolha = escolherUrlStream(original);
+  const urlFinal = escolha.url;
+  streamRota = escolha.rota;
+  if (escolha.rota === "direto") streamTentouDireto = true;
+  else streamTentouProxy = true;
   currentStreamUrl = urlFinal;
   ocultarFeedbackPlayer();
 
@@ -5787,6 +5856,7 @@ async function definirStream(url, tipo, manterTentativa) {
           mpegtsInstance.on(mpegts.Events.ERROR, function (tipoErro, detalhe) {
             console.warn("mpegts.js erro:", tipoErro, detalhe);
             if (tentarStreamDireto()) return;
+            if (tentarStreamProxy()) return;
             if (tentarPlayerNativoAutomatico()) return;
             mostrarFeedbackPlayer(
               "Canal Temporariamente Indisponível",
@@ -5927,7 +5997,7 @@ function abrirTelaConteudo(url, item, tipo) {
   currentTipo = tipoFinal;
   currentStreamUrl = "";
   currentStreamOriginal = "";
-  streamTentouDireto = false;
+  resetarTentativasStream();
   currentSerieId = tipoFinal === "serie" ? (item.series_id != null ? item.series_id : item.id) : null;
   currentSerieName = tipoFinal === "serie" ? String(item.name || "Série") : "";
   currentEpisodesData = {};
@@ -6226,7 +6296,7 @@ function abrirPlayerDoApp() {
 function tentarPlayerNativoAutomatico() {
   if (fallbackVideoNativoFeito || !temPlayerNativoApp()) return false;
   fallbackVideoNativoFeito = true;
-  exibirToast("Formato não suportado pelo navegador. Abrindo no player do app...");
+  exibirToast("Abrindo este conteúdo no player do app...");
   return abrirPlayerDoApp();
 }
 
@@ -6388,7 +6458,7 @@ function reproduzirEpisodio(numeroTemporada, indice, rolar) {
   const titulo = episodio.title || episodio.name || ("Episódio " + numero);
   const stream = urlDoEpisodio(episodio);
   currentStreamOriginal = stream;
-  streamTentouDireto = false;
+  resetarTentativasStream();
   definirStream(stream, "serie");
   currentEpisode = episodio;
 
@@ -6596,7 +6666,7 @@ function logout() {
   currentTipo = "";
   currentStreamUrl = "";
   currentStreamOriginal = "";
-  streamTentouDireto = false;
+  resetarTentativasStream();
   currentSerieId = null;
   currentSerieName = "";
   currentEpisodesData = {};
