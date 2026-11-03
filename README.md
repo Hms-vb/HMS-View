@@ -117,8 +117,12 @@ recomendado para uso público.
 - Encaminha `Range`/`If-Range` e preserva status `206 Partial Content` para MP4 e
   outros streams.
 - Segue redirecionamentos validando cada destino.
+- **Converte redirecionamentos para IP literal em hostname DNS público**
+  (`sslip.io`/`nip.io`). O Cloudflare Workers recusa `fetch` direto para IP
+  (erro 1003); com o hostname, o mesmo IP é acessado e o stream funciona.
 - Bloqueia destinos locais/privados (localhost, 10.x, 172.16–31.x, 192.168.x etc.)
-  para reduzir risco de SSRF.
+  para reduzir risco de SSRF, inclusive quando o IP está embutido em domínios
+  wildcard como `127.0.0.1.nip.io`.
 
 ### Listas M3U muito grandes
 
@@ -150,8 +154,10 @@ usado para os streams que precisam de HTTPS/CORS.
 5. **Prefira o modo rápido.** Com uma URL `get.php` que tenha `username` e
    `password`, o app tenta a API Xtream primeiro. Se o provedor bloquear a API, ele
    volta automaticamente para a M3U.
-6. **Provedores que bloqueiam IPs do Cloudflare** não funcionam pelo site. Use o
-   app HMS-TV: ele tenta a conexão direta do aparelho e, se necessário, abre o
+6. **Redirecionamento para IP literal** é tratado pelo proxy com um hostname
+   público (`sslip.io`/`nip.io`). Se o provedor bloquear de fato os IPs de saída do
+   Cloudflare, o site ainda não consegue tocar o canal. Nesse caso use o app
+   HMS-TV: ele tenta a conexão direta do aparelho e, se necessário, abre o
    player nativo. VLC/MX Player continuam disponíveis como fallback manual.
 
 ## Limites e observações
@@ -161,9 +167,10 @@ usado para os streams que precisam de HTTPS/CORS.
   assistido e não é sincronizado entre aparelhos.
 - Em uma página HTTPS, streams HTTP puros podem ser bloqueados pelo navegador
   (mixed content). O proxy resolve isso quando a origem permite a conexão.
-- Provedores que bloqueiam os IPs do Cloudflare não tocam canais HTTP pelo site,
-  mesmo com proxy. No APK, o WebView usa a rede direta do aparelho e consegue
-  abrir esses canais; se o WebView não decodificar o formato, o player nativo
-  Media3 assume.
+- Canais HTTP que redirecionam para IP literal tocam pelo site porque o proxy
+  troca o IP por um hostname público (`sslip.io`/`nip.io`). Se o provedor
+  bloquear os IPs de saída do Cloudflare, o site não toca; no APK, o WebView usa
+  a rede direta do aparelho e consegue abrir esses canais; se o WebView não
+  decodificar o formato, o player nativo Media3 assume.
 - O HTML continua funcionando como arquivo único para Xtream/M3U, desde que a
   origem libere CORS ou você use um proxy publicado.

@@ -9,6 +9,8 @@
  *  - Encaminha Range/If-Range (essencial para MP4 e alguns streams).
  *  - Reescreve playlists HLS (.m3u8), fazendo segmentos e sub-playlists
  *    passarem pelo mesmo proxy — necessário para evitar bloqueio de CORS.
+ *  - Converte destinos com IP literal para um hostname DNS público
+ *    (sslip.io/nip.io), pois o fetch do Cloudflare Workers recusa IP direto.
  *  - Proteção básica contra SSRF (bloqueia localhost e faixas privadas).
  *
  * Variáveis de ambiente opcionais (Cloudflare Pages > Settings > Variables):
@@ -87,6 +89,8 @@ function ipv4Privado(host) {
 function hostBloqueado(hostname) {
   const host = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (!host) return true;
+  const ipOculto = ipEmHostWildcard(host);
+  if (ipOculto && ipv4Privado(ipOculto)) return true;
   if (host === "localhost" || host.endsWith(".localhost")) return true;
   if (host.endsWith(".local") || host.endsWith(".internal") || host.endsWith(".home.arpa")) return true;
   if (host === "metadata.google.internal" || host === "metadata") return true;
@@ -104,6 +108,42 @@ function hostBloqueado(hostname) {
     return ipv4Privado(resto);
   }
   return ipv4Privado(host);
+}
+
+function ipv4Literal(hostname) {
+  const partes = String(hostname || "").split(".");
+  if (partes.length !== 4) return null;
+  const numeros = partes.map(function (parte) { return Number(parte); });
+  if (numeros.some(function (n) { return !Number.isInteger(n) || n < 0 || n > 255; })) return null;
+  return numeros.join(".");
+}
+
+function ipEmHostWildcard(hostname) {
+  const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
+  const match = host.match(/^(.+)\.(nip\.io|sslip\.io)$/);
+  if (!match) return null;
+  const partes = match[1].split(/[.-]/).filter(Boolean);
+  if (partes.length !== 4) return null;
+  return ipv4Literal(partes.join("."));
+}
+
+function urlComHostDns(url, hostname) {
+  const copia = new URL(url.href);
+  copia.hostname = hostname;
+  return copia;
+}
+
+function hostsDnsParaIp(url) {
+  // O fetch do Cloudflare Workers recusa IP literal (erro 1003). Hostnames
+  // públicos que resolvem para o mesmo IP contornam essa restrição.
+  if (url.protocol !== "http:") return [url];
+  const ip = ipv4Literal(url.hostname);
+  if (!ip) return [url];
+  const partes = ip.split(".");
+  return [
+    urlComHostDns(url, partes.join("-") + ".sslip.io"),
+    urlComHostDns(url, partes.join(".") + ".nip.io")
+  ];
 }
 
 function hostPermitido(hostname, env) {
@@ -318,12 +358,36 @@ async function buscarComRedirecionamentos(alvo, request, env) {
       headers.set("Accept", request.headers.get("Accept") || "*/*");
       headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HMS-TV/1.0");
 
-      const resposta = await fetch(atual.href, {
-        method: metodo,
-        headers: headers,
-        redirect: "manual",
-        signal: controller.signal
-      });
+      const candidatos = hostsDnsParaIp(atual);
+      let resposta = null;
+      let respostaBloqueada = null;
+      let ultimoErro = null;
+
+      for (let c = 0; c < candidatos.length; c += 1) {
+        try {
+          const tentativa = await fetch(candidatos[c].href, {
+            method: metodo,
+            headers: headers,
+            redirect: "manual",
+            signal: controller.signal
+          });
+          // 403/530 é o que o Cloudflare devolve ao buscar IP literal.
+          // Tenta o próximo hostname DNS antes de desistir.
+          if (c < candidatos.length - 1 && (tentativa.status === 403 || tentativa.status === 530)) {
+            if (!respostaBloqueada) respostaBloqueada = tentativa;
+            continue;
+          }
+          resposta = tentativa;
+          break;
+        } catch (erro) {
+          ultimoErro = erro;
+        }
+      }
+
+      if (!resposta) resposta = respostaBloqueada;
+      if (!resposta) {
+        throw ultimoErro || new Error("Falha ao acessar o servidor de origem.");
+      }
 
       if (resposta.status >= 300 && resposta.status < 400) {
         const local = resposta.headers.get("Location");
