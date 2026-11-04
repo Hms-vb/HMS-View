@@ -2731,6 +2731,7 @@ let buscaAtiva = false;
 let toastTimer = null;
 let loginEmAndamento = false;
 let loginAutomaticoTentado = false;
+let tentativasAutoLogin = 0;
 let observadoresGrade = [];
 
 /* Progresso de reprodução / retomada / volume */
@@ -3974,7 +3975,7 @@ async function carregarCatalogoXtream(urlBase, usuario, senha, opcoes) {
   const config = opcoes || {};
   const autenticacao = await fetchJson(
     construirApiUrl(urlBase, usuario, senha),
-    config.autenticacao || { semProxiesPublicos: true, timeout: 20000, bodyTimeout: 30000 }
+    config.autenticacao || { semProxiesPublicos: true, timeout: 45000, bodyTimeout: 60000 }
   );
   const info = autenticacao && autenticacao.user_info;
   const autenticado = info && (Number(info.auth) === 1 || String(info.status).toLowerCase() === "active");
@@ -3990,16 +3991,26 @@ async function carregarCatalogoXtream(urlBase, usuario, senha, opcoes) {
   streamBaseSeries = baseStream + "/series";
   streamBaseCanais = baseStream + "/live";
 
-  if (config.aoStatus) config.aoStatus("Carregando catálogo...");
+  const acoesCatalogo = [
+    "get_vod_streams",
+    "get_series",
+    "get_live_streams",
+    "get_vod_categories",
+    "get_series_categories",
+    "get_live_categories"
+  ];
+  const opcoesCatalogo = config.catalogo || {};
+  const respostas = [];
 
-  const respostas = await Promise.all([
-    fetchJson(apiUrl("get_vod_streams"), config.catalogo || {}),
-    fetchJson(apiUrl("get_series"), config.catalogo || {}),
-    fetchJson(apiUrl("get_live_streams"), config.catalogo || {}),
-    fetchJson(apiUrl("get_vod_categories"), config.catalogo || {}),
-    fetchJson(apiUrl("get_series_categories"), config.catalogo || {}),
-    fetchJson(apiUrl("get_live_categories"), config.catalogo || {})
-  ]);
+  // Busca em sequência: o proxy do Cloudflare e o provedor lidam melhor com
+  // uma chamada por vez. Em paralelo, o catálogo grande (séries) atrasava as
+  // demais respostas e derrubava o login automático.
+  for (let indice = 0; indice < acoesCatalogo.length; indice += 1) {
+    if (config.aoStatus) {
+      config.aoStatus("Carregando catálogo... " + (indice + 1) + "/" + acoesCatalogo.length);
+    }
+    respostas.push(await fetchJson(apiUrl(acoesCatalogo[indice]), opcoesCatalogo));
+  }
 
   todosFilmes = normalizarLista(respostas[0]);
   todosSeries = normalizarLista(respostas[1]);
@@ -4516,9 +4527,9 @@ async function entrar(event, opcoes) {
               aoStatus: definirStatusLogin,
               autenticacao: {
                 semProxiesPublicos: true,
-                timeout: 15000,
-                bodyTimeout: 25000,
-                stallTimeout: 25000
+                timeout: 30000,
+                bodyTimeout: 45000,
+                stallTimeout: 45000
               }
             });
             carregouModoRapido = true;
@@ -4639,7 +4650,20 @@ async function entrar(event, opcoes) {
     }
 
     if (automatico) {
-      if (avisoLogin) {
+      const podeRepetir = errCode === "NETWORK_ERROR" ||
+        errCode.startsWith("SERVER_ERROR_") ||
+        errCode === "INVALID_JSON";
+      if (podeRepetir && tentativasAutoLogin < 1) {
+        tentativasAutoLogin += 1;
+        if (avisoLogin) {
+          avisoLogin.textContent = "Conexão instável. Tentando novamente...";
+          avisoLogin.classList.remove("hidden");
+          avisoLogin.style.color = "";
+        }
+        setTimeout(function () {
+          if (!loginEmAndamento) entrar(null, { automatico: true });
+        }, 4000);
+      } else if (avisoLogin) {
         avisoLogin.textContent = "Não foi possível entrar automaticamente. Confira os dados da lista e clique em Entrar.";
         avisoLogin.classList.remove("hidden");
         avisoLogin.style.color = "#ff8a8f";
