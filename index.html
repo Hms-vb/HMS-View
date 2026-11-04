@@ -3887,6 +3887,19 @@ function normalizarUrlBase(valor) {
   return String(valor == null ? "" : valor).trim().replace(/\/+$/, "");
 }
 
+function baseDoServidorStream(infoServidor, urlPadrao) {
+  const host = String(infoServidor && infoServidor.url || "").trim().replace(/\/+$/, "");
+  if (!host) return urlPadrao;
+  if (/^https?:\/\//i.test(host)) return host;
+  const protocolo = String(infoServidor.server_protocol || "").toLowerCase() === "https" ? "https" : "http";
+  const porta = String(infoServidor.port || "").trim();
+  const portaPadrao = !porta ||
+    (protocolo === "http" && porta === "80") ||
+    (protocolo === "https" && porta === "443");
+  const hostComPorta = /:\d+$/.test(host) || portaPadrao ? host : host + ":" + porta;
+  return protocolo + "://" + hostComPorta;
+}
+
 function construirApiUrl(url, usuario, senha, acao, parametros) {
   const consulta = new URLSearchParams();
   consulta.set("username", usuario);
@@ -3968,9 +3981,12 @@ async function carregarCatalogoXtream(urlBase, usuario, senha, opcoes) {
   activeServerUrl = urlBase;
   activeUser = usuario;
   activePass = senha;
-  streamBaseFilmes = urlBase + "/movie";
-  streamBaseSeries = urlBase + "/series";
-  streamBaseCanais = urlBase + "/live";
+  // A API pode estar atrás de um proxy (ex.: navegauni.top/api), mas os
+  // streams ficam no servidor informado em server_info.url (ex.: d4rk.top).
+  const baseStream = baseDoServidorStream(autenticacao.server_info, urlBase);
+  streamBaseFilmes = baseStream + "/movie";
+  streamBaseSeries = baseStream + "/series";
+  streamBaseCanais = baseStream + "/live";
 
   if (config.aoStatus) config.aoStatus("Carregando catálogo...");
 
@@ -4086,7 +4102,15 @@ function imagemDoItem(item) {
   ];
   for (let i = 0; i < valores.length; i += 1) {
     const imagem = valorImagem(valores[i]);
-    if (imagem) return imagem;
+    // Logos/capas costumam vir em HTTP. Em página HTTPS o navegador bloqueia
+    // conteúdo misto, então só nesse caso a imagem passa pelo proxy. Imagens
+    // HTTPS continuam diretas para não sobrecarregar as Functions.
+    if (imagem) {
+      if (window.location.protocol === "https:" && /^http:\/\//i.test(imagem)) {
+        return resolverUrlProxy(imagem) || imagem;
+      }
+      return imagem;
+    }
   }
   return PLACEHOLDER;
 }
