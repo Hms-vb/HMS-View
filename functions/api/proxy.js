@@ -18,12 +18,166 @@
  *  - ALLOWED_ORIGINS: lista separada por vírgula. Ex.: "https://meusite.pages.dev"
  */
 
+import { connect } from "cloudflare:sockets";
+
 const TIMEOUT_MS = 25000;
 const MAX_REDIRECTS = 4;
 // Playlists M3U de catálogo podem ter centenas de MB. Só lemos como texto
 // manifestos HLS e respostas pequenas; acima deste limite o corpo é repassado
 // em streaming para não estourar a memória das Functions (~128 MB).
 const MAX_TEXTO_BYTES = 4 * 1024 * 1024;
+
+// O provedor deste catálogo bloqueia User-Agent de navegador na API
+// (player_api.php) e no get.php. A ordem abaixo tenta primeiro UAs de player
+// (mais compatíveis com Xtream Codes) e deixa o UA de navegador como último
+// recurso, para não quebrar provedores que só aceitam navegador.
+const USER_AGENTS = [
+  "VLC/3.0.21 LibVLC/3.0.21",
+  "IPTVSmarters/1.0",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+];
+const PLAYER_UA = USER_AGENTS[0];
+const TENTATIVAS_API = USER_AGENTS.length;
+const ESPERA_ENTRE_TENTATIVAS_MS = 800;
+const CACHE_API_TTL_MS = 60000;
+const CACHE_API_MAX_BYTES = 24 * 1024 * 1024;
+
+function esperar(ms) {
+  return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+function ehApiXtream(alvo) {
+  return /\/player_api\.php$/i.test(String((alvo && alvo.pathname) || ""));
+}
+
+function respostaTransitoria(resposta) {
+  if (!resposta) return false;
+  const status = resposta.status;
+  if (status === 401 || status === 403 || status === 429 || status >= 500) return true;
+  // O provedor devolve 200 com corpo vazio quando está limitando requisições.
+  if (status === 200 && resposta.headers.get("content-length") === "0") return true;
+  return false;
+}
+
+// Uma chamada por vez dentro da mesma instância evita a rajada que faz o
+// provedor responder 401/vazio. O Cloudflare pode usar instâncias diferentes,
+// mas a fila ajuda no caso comum de várias chamadas do mesmo login.
+let filaApi = Promise.resolve();
+
+function enfileirarApi(tarefa) {
+  const execucao = filaApi.then(async function () {
+    const resultado = await tarefa();
+    await esperar(200);
+    return resultado;
+  });
+  filaApi = execucao.catch(function () {});
+  return execucao;
+}
+
+// Cache curto em memória para não baixar o catálogo inteiro de novo quando o
+// usuário repete o login ou o app tenta novamente.
+const cacheApi = new Map();
+let cacheApiBytes = 0;
+
+function lerCacheApi(chave) {
+  const item = cacheApi.get(chave);
+  if (!item) return null;
+  if (Date.now() - item.tempo > CACHE_API_TTL_MS) {
+    cacheApi.delete(chave);
+    cacheApiBytes -= item.dados.buffer.byteLength;
+    return null;
+  }
+  return item.dados;
+}
+
+function gravarCacheApi(chave, dados) {
+  const tamanho = dados.buffer.byteLength;
+  if (!tamanho || tamanho > CACHE_API_MAX_BYTES / 2) return;
+  const anterior = cacheApi.get(chave);
+  if (anterior) cacheApiBytes -= anterior.dados.buffer.byteLength;
+  cacheApi.set(chave, { tempo: Date.now(), dados: dados });
+  cacheApiBytes += tamanho;
+  while (cacheApiBytes > CACHE_API_MAX_BYTES && cacheApi.size > 1) {
+    const primeira = cacheApi.keys().next().value;
+    if (primeira === chave) break;
+    const item = cacheApi.get(primeira);
+    cacheApi.delete(primeira);
+    if (item) cacheApiBytes -= item.dados.buffer.byteLength;
+  }
+}
+
+function respostaDeDados(dados) {
+  return {
+    resposta: new Response(dados.buffer, {
+      status: dados.status,
+      headers: {
+        "content-type": dados.contentType,
+        "content-length": String(dados.buffer.byteLength)
+      }
+    }),
+    alvo: dados.alvo
+  };
+}
+
+async function buscarApi(alvo, request, env) {
+  const chave = alvo.href;
+  const emCache = lerCacheApi(chave);
+  if (emCache) return respostaDeDados(emCache);
+
+  let ultimaResposta = null;
+  let ultimoErro = null;
+
+  for (let tentativa = 0; tentativa < TENTATIVAS_API; tentativa += 1) {
+    if (tentativa > 0) await esperar(ESPERA_ENTRE_TENTATIVAS_MS * tentativa);
+    const userAgent = USER_AGENTS[tentativa] || PLAYER_UA;
+
+    try {
+      const resultado = await buscarComRedirecionamentos(alvo, request, env, userAgent);
+      const resposta = resultado.resposta;
+
+      if (respostaTransitoria(resposta) && tentativa < TENTATIVAS_API - 1) {
+        ultimaResposta = resultado;
+        try { await resposta.body.cancel(); } catch (erro) {}
+        continue;
+      }
+
+      const buffer = await resposta.arrayBuffer();
+      if (!buffer.byteLength && tentativa < TENTATIVAS_API - 1) {
+        ultimaResposta = resultado;
+        continue;
+      }
+
+      const dados = {
+        status: resposta.status,
+        contentType: resposta.headers.get("content-type") || "application/json; charset=utf-8",
+        buffer: buffer,
+        alvo: resultado.alvo
+      };
+      if (resposta.status === 200 && buffer.byteLength > 0) gravarCacheApi(chave, dados);
+      return respostaDeDados(dados);
+    } catch (erro) {
+      ultimoErro = erro;
+      // Se o provedor demorou demais, outra tentativa só aumentaria o tempo
+      // total e poderia estourar o limite da Function.
+      if (erro && erro.name === "AbortError") throw erro;
+      if (tentativa === TENTATIVAS_API - 1) throw erro;
+    }
+  }
+
+  if (ultimaResposta) {
+    try {
+      const buffer = await ultimaResposta.resposta.arrayBuffer();
+      return respostaDeDados({
+        status: ultimaResposta.resposta.status,
+        contentType: ultimaResposta.resposta.headers.get("content-type") || "application/json; charset=utf-8",
+        buffer: buffer,
+        alvo: ultimaResposta.alvo
+      });
+    } catch (erro) {}
+  }
+
+  throw ultimoErro || new Error("Falha ao acessar a API do provedor.");
+}
 
 function jsonResponse(status, payload, cors) {
   return new Response(JSON.stringify(payload), {
@@ -342,69 +496,410 @@ function cabecalhosResposta(upstream, cors, tipoConteudo) {
   return headers;
 }
 
-async function buscarComRedirecionamentos(alvo, request, env) {
-  let atual = alvo;
+function juntarBytes(partes) {
+  let total = 0;
+  for (const parte of partes) total += parte.byteLength;
+  const juntas = new Uint8Array(total);
+  let posicao = 0;
+  for (const parte of partes) {
+    juntas.set(parte, posicao);
+    posicao += parte.byteLength;
+  }
+  return juntas;
+}
+
+function indiceFimCabecalhos(bytes) {
+  for (let i = 0; i + 3 < bytes.length; i += 1) {
+    if (bytes[i] === 13 && bytes[i + 1] === 10 && bytes[i + 2] === 13 && bytes[i + 3] === 10) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function analisarCabecalhos(texto) {
+  const linhas = texto.split("\r\n");
+  const linhaStatus = linhas.shift() || "";
+  const partes = linhaStatus.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})\s*(.*)$/i);
+  if (!partes) throw new Error("Resposta HTTP inválida do servidor de origem.");
+
+  const headers = new Headers();
+  for (const linha of linhas) {
+    if (!linha) continue;
+    const separador = linha.indexOf(":");
+    if (separador <= 0) continue;
+    const nome = linha.slice(0, separador).trim();
+    const valor = linha.slice(separador + 1).trim();
+    // Set-Cookie não é necessário para o player e evita repassar cookies do
+    // provedor para o navegador.
+    if (!nome || /^set-cookie$/i.test(nome)) continue;
+    try { headers.append(nome, valor); } catch (erro) {}
+  }
+
+  return {
+    status: Number(partes[1]),
+    statusText: partes[2] || "",
+    headers: headers
+  };
+}
+
+function comPrazo(promessa, ms) {
+  let timer = null;
+  const limite = new Promise(function (resolver, rejeitar) {
+    timer = setTimeout(function () {
+      const erro = new Error("O servidor de origem demorou demais para responder.");
+      erro.name = "AbortError";
+      rejeitar(erro);
+    }, Math.max(1, ms));
+  });
+  return Promise.race([promessa, limite]).finally(function () {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+async function lerCabecalhosSocket(leitor) {
+  let buffer = new Uint8Array(0);
+  while (true) {
+    const leitura = await leitor.read();
+    if (leitura.done) throw new Error("Conexão encerrada antes dos cabeçalhos.");
+    if (leitura.value && leitura.value.byteLength) {
+      buffer = juntarBytes([buffer, leitura.value]);
+    }
+    const fim = indiceFimCabecalhos(buffer);
+    if (fim >= 0) {
+      const texto = new TextDecoder("iso-8859-1").decode(buffer.slice(0, fim));
+      const dados = analisarCabecalhos(texto);
+      dados.resto = buffer.slice(fim + 4);
+      return dados;
+    }
+    if (buffer.byteLength > 64 * 1024) {
+      throw new Error("Cabeçalhos grandes demais na resposta de origem.");
+    }
+  }
+}
+
+async function finalizarSocket(socket, leitor) {
+  try { if (leitor) await leitor.cancel(); } catch (erro) {}
+  try { if (socket) await socket.close(); } catch (erro) {}
+}
+
+function criarCorpoSocket(socket, leitor, resto, headers, prazoRestante) {
+  const codificacao = String(headers.get("transfer-encoding") || "").toLowerCase();
+  const chunked = /\bchunked\b/.test(codificacao);
+  const comprimentoTexto = headers.get("content-length");
+  const comprimento = comprimentoTexto === null ? NaN : Number(comprimentoTexto);
+  let restante = Number.isFinite(comprimento) && comprimento >= 0 ? comprimento : null;
+  let buffer = resto && resto.byteLength ? resto : new Uint8Array(0);
+  let finalizado = false;
+
+  async function finalizar() {
+    if (finalizado) return;
+    finalizado = true;
+    await finalizarSocket(socket, leitor);
+  }
+
+  async function lerMais() {
+    while (true) {
+      const leitura = await comPrazo(leitor.read(), prazoRestante());
+      if (leitura.done) return false;
+      if (leitura.value && leitura.value.byteLength) {
+        buffer = juntarBytes([buffer, leitura.value]);
+        return true;
+      }
+    }
+  }
+
+  return new ReadableStream({
+    async pull(controller) {
+      try {
+        if (chunked) {
+          while (true) {
+            let fimLinha = -1;
+            for (let i = 0; i + 1 < buffer.length; i += 1) {
+              if (buffer[i] === 13 && buffer[i + 1] === 10) {
+                fimLinha = i;
+                break;
+              }
+            }
+            if (fimLinha < 0) {
+              if (!(await lerMais())) {
+                controller.error(new Error("Resposta chunked incompleta."));
+                await finalizar();
+                return;
+              }
+              continue;
+            }
+
+            const linha = new TextDecoder("iso-8859-1").decode(buffer.slice(0, fimLinha));
+            const tamanho = parseInt(linha.split(";")[0].trim(), 16);
+            if (!Number.isFinite(tamanho) || tamanho < 0) {
+              throw new Error("Bloco chunked inválido.");
+            }
+            if (tamanho === 0) {
+              controller.close();
+              await finalizar();
+              return;
+            }
+
+            const inicioDados = fimLinha + 2;
+            if (buffer.length < inicioDados + tamanho + 2) {
+              if (!(await lerMais())) {
+                controller.error(new Error("Resposta chunked incompleta."));
+                await finalizar();
+                return;
+              }
+              continue;
+            }
+
+            const dados = buffer.slice(inicioDados, inicioDados + tamanho);
+            buffer = buffer.slice(inicioDados + tamanho + 2);
+            controller.enqueue(dados);
+            return;
+          }
+        }
+
+        if (restante !== null) {
+          if (restante === 0) {
+            controller.close();
+            await finalizar();
+            return;
+          }
+          if (!buffer.byteLength && !(await lerMais())) {
+            controller.error(new Error("Conexão encerrada antes do corpo completo."));
+            await finalizar();
+            return;
+          }
+          const quantidade = Math.min(buffer.byteLength, restante);
+          const pedaco = buffer.slice(0, quantidade);
+          buffer = buffer.slice(quantidade);
+          restante -= quantidade;
+          controller.enqueue(pedaco);
+          if (restante === 0) {
+            controller.close();
+            await finalizar();
+          }
+          return;
+        }
+
+        // Sem Content-Length e sem chunked: lê até o servidor fechar.
+        if (!buffer.byteLength && !(await lerMais())) {
+          controller.close();
+          await finalizar();
+          return;
+        }
+        const pedaco = buffer;
+        buffer = new Uint8Array(0);
+        controller.enqueue(pedaco);
+      } catch (erro) {
+        controller.error(erro);
+        await finalizar();
+      }
+    },
+    async cancel() {
+      await finalizar();
+    }
+  });
+}
+
+async function buscarViaSocket(alvo, request, userAgent) {
+  const seguro = alvo.protocol === "https:";
+  const porta = Number(alvo.port || (seguro ? 443 : 80));
   const metodo = request.method === "HEAD" ? "HEAD" : "GET";
+  const inicio = Date.now();
+  const prazoRestante = function () {
+    return Math.max(1000, TIMEOUT_MS - (Date.now() - inicio));
+  };
+
+  const socket = connect(
+    { hostname: alvo.hostname.replace(/^\[|\]$/g, ""), port: porta },
+    seguro ? { secureTransport: "on" } : undefined
+  );
+  let leitor = null;
+  let concluido = false;
+
+  try {
+    const escritor = socket.writable.getWriter();
+    const linhas = [
+      metodo + " " + (alvo.pathname || "/") + (alvo.search || "") + " HTTP/1.1",
+      "Host: " + alvo.host,
+      "User-Agent: " + (userAgent || PLAYER_UA),
+      "Accept: " + (request.headers.get("Accept") || "*/*"),
+      "Accept-Language: pt-BR,pt;q=0.9,en;q=0.8",
+      "Accept-Encoding: identity",
+      "Connection: close"
+    ];
+    const range = request.headers.get("Range");
+    const ifRange = request.headers.get("If-Range");
+    if (range) linhas.push("Range: " + range);
+    if (ifRange) linhas.push("If-Range: " + ifRange);
+    linhas.push("", "");
+
+    await comPrazo(escritor.write(new TextEncoder().encode(linhas.join("\r\n"))), prazoRestante());
+    escritor.releaseLock();
+
+    leitor = socket.readable.getReader();
+    const cabecalho = await comPrazo(lerCabecalhosSocket(leitor), prazoRestante());
+    const semCorpo = metodo === "HEAD" || cabecalho.status === 204 ||
+      cabecalho.status === 304 || (cabecalho.status >= 100 && cabecalho.status < 200);
+
+    if (semCorpo) {
+      await finalizarSocket(socket, leitor);
+      concluido = true;
+      return {
+        resposta: new Response(null, {
+          status: cabecalho.status,
+          statusText: cabecalho.statusText,
+          headers: cabecalho.headers
+        }),
+        alvo: alvo
+      };
+    }
+
+    const corpo = criarCorpoSocket(socket, leitor, cabecalho.resto, cabecalho.headers, prazoRestante);
+    const resposta = new Response(corpo, {
+      status: cabecalho.status,
+      statusText: cabecalho.statusText,
+      headers: cabecalho.headers
+    });
+    concluido = true;
+    return { resposta: resposta, alvo: alvo };
+  } finally {
+    if (!concluido) await finalizarSocket(socket, leitor);
+  }
+}
+
+async function buscarViaFetch(alvo, request, env, userAgent) {
+  const headers = new Headers();
+  const range = request.headers.get("Range");
+  const ifRange = request.headers.get("If-Range");
+  if (range) headers.set("Range", range);
+  if (ifRange) headers.set("If-Range", ifRange);
+  headers.set("Accept", request.headers.get("Accept") || "*/*");
+  headers.set("User-Agent", userAgent || PLAYER_UA);
+
   const controller = new AbortController();
   const timer = setTimeout(function () { controller.abort(); }, TIMEOUT_MS);
 
   try {
-    for (let i = 0; i <= MAX_REDIRECTS; i += 1) {
-      const headers = new Headers();
-      const range = request.headers.get("Range");
-      const ifRange = request.headers.get("If-Range");
-      if (range) headers.set("Range", range);
-      if (ifRange) headers.set("If-Range", ifRange);
-      headers.set("Accept", request.headers.get("Accept") || "*/*");
-      headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HMS-TV/1.0");
+    const candidatos = hostsDnsParaIp(alvo);
+    let resposta = null;
+    let respostaBloqueada = null;
+    let ultimoErro = null;
 
-      const candidatos = hostsDnsParaIp(atual);
-      let resposta = null;
-      let respostaBloqueada = null;
-      let ultimoErro = null;
-
-      for (let c = 0; c < candidatos.length; c += 1) {
-        try {
-          const tentativa = await fetch(candidatos[c].href, {
-            method: metodo,
-            headers: headers,
-            redirect: "manual",
-            signal: controller.signal
-          });
-          // 403/530 é o que o Cloudflare devolve ao buscar IP literal.
-          // Tenta o próximo hostname DNS antes de desistir.
-          if (c < candidatos.length - 1 && (tentativa.status === 403 || tentativa.status === 530)) {
-            if (!respostaBloqueada) respostaBloqueada = tentativa;
-            continue;
-          }
-          resposta = tentativa;
-          break;
-        } catch (erro) {
-          ultimoErro = erro;
+    for (let c = 0; c < candidatos.length; c += 1) {
+      try {
+        const tentativa = await fetch(candidatos[c].href, {
+          method: request.method === "HEAD" ? "HEAD" : "GET",
+          headers: headers,
+          redirect: "manual",
+          signal: controller.signal
+        });
+        // 403/530 é o que o Cloudflare devolve ao buscar IP literal.
+        // Tenta o próximo hostname DNS antes de desistir.
+        if (c < candidatos.length - 1 && (tentativa.status === 403 || tentativa.status === 530)) {
+          if (!respostaBloqueada) respostaBloqueada = tentativa;
+          continue;
         }
+        resposta = tentativa;
+        break;
+      } catch (erro) {
+        ultimoErro = erro;
       }
-
-      if (!resposta) resposta = respostaBloqueada;
-      if (!resposta) {
-        throw ultimoErro || new Error("Falha ao acessar o servidor de origem.");
-      }
-
-      if (resposta.status >= 300 && resposta.status < 400) {
-        const local = resposta.headers.get("Location");
-        if (!local) return { resposta: resposta, alvo: atual };
-        if (i === MAX_REDIRECTS) throw new Error("Muitos redirecionamentos.");
-        const proximo = new URL(local, atual);
-        validarAlvo(proximo.href, env);
-        atual = proximo;
-        continue;
-      }
-
-      return { resposta: resposta, alvo: atual };
     }
-    throw new Error("Muitos redirecionamentos.");
+
+    if (!resposta) resposta = respostaBloqueada;
+    if (!resposta) throw ultimoErro || new Error("Falha ao acessar o servidor de origem.");
+    return { resposta: resposta, alvo: alvo };
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function buscarHttp(alvo, request, env, userAgent) {
+  // O fetch do Workers adiciona cabeçalhos Cf-* que alguns provedores usam
+  // para bloquear a requisição. Em HTTP puro, o socket TCP fala direto com a
+  // origem e contorna esse bloqueio. HTTPS segue pelo fetch normal.
+  if (alvo.protocol === "http:") {
+    let resultadoSocket = null;
+    try {
+      resultadoSocket = await buscarViaSocket(alvo, request, userAgent);
+    } catch (erro) {
+      if (erro && erro.name === "AbortError") throw erro;
+      // Socket indisponível: tenta o fetch normal como alternativa.
+      return await buscarViaFetch(alvo, request, env, userAgent);
+    }
+
+    // Se a origem recusar a requisição HTTP/1.1 crua (comum em servidores que
+    // exigem cabeçalhos específicos), tenta o fetch normal antes de desistir.
+    const status = resultadoSocket.resposta.status;
+    const valeTentarFetch = status === 400 || status === 403 || status === 405 ||
+      status === 501 || status === 505;
+    if (!valeTentarFetch) return resultadoSocket;
+
+    try {
+      const resultadoFetch = await buscarViaFetch(alvo, request, env, userAgent);
+      try { if (resultadoSocket.resposta.body) await resultadoSocket.resposta.body.cancel(); } catch (erro) {}
+      return resultadoFetch;
+    } catch (erro) {
+      if (erro && erro.name === "AbortError") throw erro;
+      return resultadoSocket;
+    }
+  }
+  return await buscarViaFetch(alvo, request, env, userAgent);
+}
+
+async function buscarComRedirecionamentos(alvo, request, env, userAgent) {
+  let atual = alvo;
+
+  for (let i = 0; i <= MAX_REDIRECTS; i += 1) {
+    const resultado = await buscarHttp(atual, request, env, userAgent);
+    const resposta = resultado.resposta;
+
+    if (resposta.status >= 300 && resposta.status < 400) {
+      const local = resposta.headers.get("Location");
+      if (!local) return { resposta: resposta, alvo: atual };
+      try { if (resposta.body) await resposta.body.cancel(); } catch (erro) {}
+      if (i === MAX_REDIRECTS) throw new Error("Muitos redirecionamentos.");
+      const proximo = new URL(local, atual);
+      validarAlvo(proximo.href, env);
+      atual = proximo;
+      continue;
+    }
+
+    return { resposta: resposta, alvo: atual };
+  }
+
+  throw new Error("Muitos redirecionamentos.");
+}
+
+async function buscarComFallbackUa(alvo, request, env) {
+  let ultimaResposta = null;
+  let ultimoErro = null;
+
+  for (let tentativa = 0; tentativa < USER_AGENTS.length; tentativa += 1) {
+    if (tentativa > 0) await esperar(400 * tentativa);
+    try {
+      const resultado = await buscarComRedirecionamentos(alvo, request, env, USER_AGENTS[tentativa]);
+      const resposta = resultado.resposta;
+      const transitoria = resposta.status === 401 || resposta.status === 403 ||
+        resposta.status === 429 || resposta.status >= 500;
+
+      if (transitoria && tentativa < USER_AGENTS.length - 1) {
+        ultimaResposta = resultado;
+        try { await resposta.body.cancel(); } catch (erro) {}
+        continue;
+      }
+
+      return resultado;
+    } catch (erro) {
+      ultimoErro = erro;
+      if (erro && erro.name === "AbortError") throw erro;
+      if (tentativa === USER_AGENTS.length - 1) throw erro;
+    }
+  }
+
+  if (ultimaResposta) return ultimaResposta;
+  throw ultimoErro || new Error("Falha ao acessar o servidor de origem.");
 }
 
 export async function onRequest(context) {
@@ -435,7 +930,9 @@ export async function onRequest(context) {
   }
 
   try {
-    const resultado = await buscarComRedirecionamentos(alvo, request, env);
+    const resultado = ehApiXtream(alvo) && request.method === "GET"
+      ? await enfileirarApi(function () { return buscarApi(alvo, request, env); })
+      : await buscarComFallbackUa(alvo, request, env);
     const upstream = resultado.resposta;
     const tipoOriginal = upstream.headers.get("content-type") || "";
     const headers = cabecalhosResposta(upstream, cors, null);
