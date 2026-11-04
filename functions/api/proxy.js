@@ -39,7 +39,7 @@ const USER_AGENTS = [
 const PLAYER_UA = USER_AGENTS[0];
 const TENTATIVAS_API = USER_AGENTS.length;
 const ESPERA_ENTRE_TENTATIVAS_MS = 800;
-const CACHE_API_TTL_MS = 60000;
+const CACHE_API_TTL_MS = 5 * 60 * 1000;
 const CACHE_API_MAX_BYTES = 24 * 1024 * 1024;
 
 function esperar(ms) {
@@ -59,22 +59,7 @@ function respostaTransitoria(resposta) {
   return false;
 }
 
-// Uma chamada por vez dentro da mesma instância evita a rajada que faz o
-// provedor responder 401/vazio. O Cloudflare pode usar instâncias diferentes,
-// mas a fila ajuda no caso comum de várias chamadas do mesmo login.
-let filaApi = Promise.resolve();
-
-function enfileirarApi(tarefa) {
-  const execucao = filaApi.then(async function () {
-    const resultado = await tarefa();
-    await esperar(200);
-    return resultado;
-  });
-  filaApi = execucao.catch(function () {});
-  return execucao;
-}
-
-// Cache curto em memória para não baixar o catálogo inteiro de novo quando o
+// Cache em memória para não baixar o catálogo inteiro de novo quando o
 // usuário repete o login ou o app tenta novamente.
 const cacheApi = new Map();
 let cacheApiBytes = 0;
@@ -931,7 +916,7 @@ export async function onRequest(context) {
 
   try {
     const resultado = ehApiXtream(alvo) && request.method === "GET"
-      ? await enfileirarApi(function () { return buscarApi(alvo, request, env); })
+      ? await buscarApi(alvo, request, env)
       : await buscarComFallbackUa(alvo, request, env);
     const upstream = resultado.resposta;
     const tipoOriginal = upstream.headers.get("content-type") || "";
