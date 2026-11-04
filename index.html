@@ -2567,11 +2567,12 @@ img {
         </div>
       </details>
       <label class="remember-row" for="lembrarLogin">
-        <input id="lembrarLogin" type="checkbox">
+        <input id="lembrarLogin" type="checkbox" checked>
         <span class="checkbox-custom" aria-hidden="true"></span>
         <span>Lembrar meus dados neste navegador</span>
       </label>
       <button id="btnEntrar" class="login-submit" type="submit">Entrar</button>
+      <p id="loginAutoStatus" class="form-hint hidden" role="status" aria-live="polite"></p>
     </form>
     <div id="cloudProxyNotice" style="margin-top: 14px; padding: 10px 14px; background: rgba(229, 9, 20, 0.08); border: 1px solid rgba(229, 9, 20, 0.25); border-radius: 8px; font-size: 0.72rem; color: #d0d0d0; line-height: 1.45; text-align: left;">
       <span style="color: #46d369; font-weight: 700;">● Cloudflare / HTTPS Seguro:</span> Conexão protegida com proxy anti-CORS e reprodução HLS.js ativada para canais ao vivo e filmes.
@@ -2729,6 +2730,7 @@ let searchDebounce = null;
 let buscaAtiva = false;
 let toastTimer = null;
 let loginEmAndamento = false;
+let loginAutomaticoTentado = false;
 let observadoresGrade = [];
 
 /* Progresso de reprodução / retomada / volume */
@@ -4411,14 +4413,48 @@ function preencherLoginSalvo() {
   if (lembrar) lembrar.checked = true;
 }
 
+function tentarLoginAutomatico() {
+  if (loginAutomaticoTentado) return;
+  loginAutomaticoTentado = true;
+
+  if (storageGet("iptv_remember") !== "true") return;
+
+  const campoUrl = $("#urlServidor");
+  const campoUsuario = $("#usuario");
+  const campoSenha = $("#senha");
+  const url = campoUrl ? campoUrl.value.trim() : "";
+  const usuario = campoUsuario ? campoUsuario.value.trim() : "";
+  const senha = campoSenha ? campoSenha.value : "";
+
+  if (!url) return;
+
+  const ehM3u = modoLoginAtual === "m3u" || /\.m3u8?(\?|$)/i.test(url) || url.includes("get.php");
+  if (!ehM3u && (!usuario || !senha)) return;
+
+  const aviso = $("#loginAutoStatus");
+  if (aviso) {
+    aviso.textContent = "Entrando automaticamente com a lista salva...";
+    aviso.classList.remove("hidden");
+    aviso.style.color = "";
+  }
+
+  setTimeout(function () {
+    entrar(null, { automatico: true });
+  }, 180);
+}
+
 function definirStatusLogin(texto) {
   const botao = $("#btnEntrar");
   if (botao) botao.textContent = texto;
 }
 
-async function entrar(event) {
+async function entrar(event, opcoes) {
   if (event) event.preventDefault();
   if (loginEmAndamento) return;
+
+  const automatico = Boolean(opcoes && opcoes.automatico);
+  const avisoLogin = $("#loginAutoStatus");
+  if (avisoLogin && !automatico) avisoLogin.classList.add("hidden");
 
   const campoUrl = $("#urlServidor");
   const campoUsuario = $("#usuario");
@@ -4535,6 +4571,7 @@ async function entrar(event) {
     const app = $("#appScreen");
     if (telaLogin) telaLogin.classList.add("hidden");
     if (app) app.classList.remove("hidden");
+    if (avisoLogin) avisoLogin.classList.add("hidden");
     const busca = $("#buscaGlobal");
     if (busca) busca.value = "";
     renderTelaPrincipal();
@@ -4601,7 +4638,15 @@ async function entrar(event) {
         (detalheProxy ? "\n\nDetalhe do proxy: " + detalheProxy : "");
     }
 
-    alert(mensagem);
+    if (automatico) {
+      if (avisoLogin) {
+        avisoLogin.textContent = "Não foi possível entrar automaticamente. Confira os dados da lista e clique em Entrar.";
+        avisoLogin.classList.remove("hidden");
+        avisoLogin.style.color = "#ff8a8f";
+      }
+    } else {
+      alert(mensagem);
+    }
   } finally {
     loginEmAndamento = false;
     if (botao) {
@@ -6725,6 +6770,12 @@ function logout() {
     botao.disabled = false;
     botao.textContent = "Entrar";
   }
+  const avisoLogin = $("#loginAutoStatus");
+  if (avisoLogin) {
+    avisoLogin.textContent = "";
+    avisoLogin.classList.add("hidden");
+    avisoLogin.style.color = "";
+  }
   document.title = "HMS-TV — IPTV e Vida";
   window.scrollTo({ top: 0, behavior: "auto" });
   if (document.fullscreenElement && document.exitFullscreen) {
@@ -6751,6 +6802,7 @@ function inicializar() {
     proxyCustom.addEventListener("blur", salvarConfigProxy);
   }
   preencherLoginSalvo();
+  tentarLoginAutomatico();
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") fecharMenu();
     if (!currentStreamUrl || !$("#videoPlayer")) return;
